@@ -6,41 +6,68 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/siadat/well/parser"
+	"github.com/siadat/well/scanner"
 )
 
 func TestParser(tt *testing.T) {
 	var testCases = []struct {
 		src  string
-		want parser.CmdNode
+		want *parser.Root
+		// encoded []string
+		// values map[string]interface{}
 	}{
 		{
 			src: `ls  -lash --directory -C ./something`,
-			want: parser.ContainerNode{
-				Items: []parser.CmdNode{
-					parser.Arg{`ls`},
+			// encoded: []string{"ls", "-lash", "--directory", "-C", "./something"},
+			want: &parser.Root{
+				[]parser.CmdNode{
+					parser.Wrd{`ls`},
 					parser.Whs{`  `},
-					parser.Arg{`-lash`},
+					parser.Wrd{`-lash`},
 					parser.Whs{` `},
-					parser.Arg{`--directory`},
+					parser.Wrd{`--directory`},
 					parser.Whs{` `},
-					parser.Arg{`-C`},
+					parser.Wrd{`-C`},
 					parser.Whs{` `},
-					parser.Arg{`./something`},
+					parser.Wrd{`./something`},
 				},
 			},
 		},
 		{
 			src: `echo "Hello ${name}!"`,
-			want: parser.ContainerNode{
-				Items: []parser.CmdNode{
-					parser.Arg{`echo`},
+			// encoded: []string{"echo", "Hello sina!"},
+			// values:  map[string]interface{}{"name": "sina"},
+			want: &parser.Root{
+				[]parser.CmdNode{
+					parser.Wrd{`echo`},
 					parser.Whs{` `},
 					parser.ContainerNode{
+						Type: scanner.DOUBLE_QUOTE,
 						Items: []parser.CmdNode{
-							parser.Arg{`Hello`},
+							parser.Wrd{`Hello`},
 							parser.Whs{` `},
 							parser.Var{`name`, ``},
-							parser.Arg{`!`},
+							parser.Wrd{`!`},
+						},
+					},
+				},
+			},
+		},
+		{
+			src: `jq «.${key:%q} | .»`,
+			want: &parser.Root{
+				[]parser.CmdNode{
+					parser.Wrd{`jq`},
+					parser.Whs{` `},
+					parser.ContainerNode{
+						Type: scanner.LDOUBLE_GUILLEMET,
+						Items: []parser.CmdNode{
+							parser.Wrd{`.`},
+							parser.Var{`key`, `%q`},
+							parser.Whs{` `},
+							parser.Wrd{`|`},
+							parser.Whs{` `},
+							parser.Wrd{`.`},
 						},
 					},
 				},
@@ -48,45 +75,57 @@ func TestParser(tt *testing.T) {
 		},
 		{
 			src: `one ${var} three`,
-			want: parser.ContainerNode{
-				Items: []parser.CmdNode{
-					parser.Arg{`one`},
+			want: &parser.Root{
+				[]parser.CmdNode{
+					parser.Wrd{`one`},
+					parser.Whs{` `},
 					parser.Var{`var`, ``},
-					parser.Arg{`three`},
+					parser.Whs{` `},
+					parser.Wrd{`three`},
 				},
 			},
 		},
 		{
 			src: `one ${var:%q} three`,
-			want: parser.ContainerNode{
-				Items: []parser.CmdNode{
-					parser.Arg{`one`},
+			want: &parser.Root{
+				[]parser.CmdNode{
+					parser.Wrd{`one`},
+					parser.Whs{` `},
 					parser.Var{`var`, `%q`},
-					parser.Arg{`three`},
+					parser.Whs{` `},
+					parser.Wrd{`three`},
 				},
 			},
 		},
 		{
 			src: `one «${var:%q} «this is \«three\»» four» end`,
-			want: parser.ContainerNode{
-				Items: []parser.CmdNode{
-					parser.Arg{`one`},
+			want: &parser.Root{
+				[]parser.CmdNode{
+					parser.Wrd{`one`},
 					parser.Whs{` `},
 					parser.ContainerNode{
+						Type: scanner.LDOUBLE_GUILLEMET,
 						Items: []parser.CmdNode{
 							parser.Var{`var`, `%q`},
 							parser.Whs{` `},
 							parser.ContainerNode{
+								Type: scanner.LDOUBLE_GUILLEMET,
 								Items: []parser.CmdNode{
-									parser.Arg{`this is «three»`},
+									parser.Wrd{`this`},
+									parser.Whs{` `},
+									parser.Wrd{`is`},
+									parser.Whs{` `},
+									parser.Wrd{`«`},
+									parser.Wrd{`three`},
+									parser.Wrd{`»`},
 								},
 							},
 							parser.Whs{` `},
-							parser.Arg{`four`},
+							parser.Wrd{`four`},
 						},
 					},
 					parser.Whs{` `},
-					parser.Arg{`end`},
+					parser.Wrd{`end`},
 				},
 			},
 		},
@@ -100,7 +139,7 @@ func TestParser(tt *testing.T) {
 			tt.Fatalf("test case failed src=%q: %v", src, err)
 		}
 		if diff := cmp.Diff(tc.want, got); diff != "" {
-			tt.Errorf("case failed src=%q (-want +got):\n%s", src, diff)
+			tt.Fatalf("case failed src=%q (-want +got):\n%s", src, diff)
 		}
 	}
 }

@@ -1,3 +1,2 @@
 all:
-	go test -v ./scanner
-	# go test -v ./parser
+	go test -count=1 ./...

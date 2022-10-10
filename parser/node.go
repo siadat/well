@@ -2,8 +2,8 @@ package parser
 
 import "github.com/siadat/well/scanner"
 
-// Arg is an arg node
-type Arg struct {
+// Wrd is an arg node
+type Wrd struct {
 	Lit string
 }
 
@@ -23,11 +23,16 @@ type ContainerNode struct {
 	Items []CmdNode
 }
 
+type Root struct {
+	Items []CmdNode
+}
+
 type CmdNode interface {
 	node()
 }
 
-func (Arg) node()           {}
+func (Wrd) node()           {}
 func (ContainerNode) node() {}
+func (Root) node()          {}
 func (Var) node()           {}
 func (Whs) node()           {}

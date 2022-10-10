@@ -103,10 +103,10 @@ func TestScanner(tt *testing.T) {
 		}
 
 		if diff := cmp.Diff(([]error)(nil), errs); diff != "" {
-			tt.Errorf("case error failed to match src=%q (-want +got):\n%s", src, diff)
+			tt.Fatalf("case error failed to match src=%q (-want +got):\n%s", src, diff)
 		}
 		if diff := cmp.Diff(tc.want, got); diff != "" {
-			tt.Errorf("case failed src=%q (-want +got):\n%s", src, diff)
+			tt.Fatalf("case failed src=%q (-want +got):\n%s", src, diff)
 		}
 	}
 }

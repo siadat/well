@@ -9,6 +9,7 @@ import (
 
 type CmdScanner struct {
 	src          []rune
+	currToken    CmdToken
 	currRune     rune
 	position     int
 	readPosition int
@@ -33,6 +34,14 @@ func NewScanner(src io.Reader) *CmdScanner {
 	}
 	scanner.readRune()
 	return scanner
+}
+
+func (s *CmdScanner) Eof() bool {
+	return s.currToken.Typ == EOF
+}
+
+func (s *CmdScanner) CurrToken() CmdToken {
+	return s.currToken
 }
 
 func (s *CmdScanner) reset() {
@@ -183,7 +192,7 @@ func (s *CmdScanner) readWord() CmdToken {
 	}
 }
 
-func (s *CmdScanner) printCursor(prefix string) {
+func (s *CmdScanner) PrintCursor(layout string, args ...interface{}) {
 	lines := strings.Split(string(s.src), "\n")
 	var b strings.Builder
 	var line, column = s.getCurrPosition()
@@ -195,8 +204,9 @@ func (s *CmdScanner) printCursor(prefix string) {
 		ch = fmt.Sprintf("%q", s.currRune)
 	}
 
+	var prefix = fmt.Sprintf(layout, args...)
 	b.WriteString(fmt.Sprintf("%s  %s\n", prefix, lines[line]))
-	b.WriteString(fmt.Sprintf("%s  %s▲ [%d]=%s\n", prefix, strings.Repeat(" ", column), s.position, ch))
+	b.WriteString(fmt.Sprintf("%s  %s▲ [%d]=%s token=%s\n", prefix, strings.Repeat(" ", column), s.position, ch, s.currToken))
 	fmt.Print(b.String())
 	// fmt.Println("[debug] ", prefix, string(s.src), len(s.src), fmt.Sprintf("[%4d]=%c", s.position, s.currRune))
 }
@@ -216,13 +226,16 @@ func (s *CmdScanner) getCurrPosition() (int, int) {
 }
 
 func (s *CmdScanner) NextToken() (CmdToken, error) {
+	var t, err = s.nextToken()
+	s.currToken = t
+	s.PrintCursor("deferred")
+	return t, err
+}
+
+func (s *CmdScanner) nextToken() (CmdToken, error) {
 	var tok = CmdToken{
 		Typ: ILLEGAL_TOKEN,
 	}
-	defer func() {
-		s.printCursor("deferred")
-		// fmt.Printf("\t%s\n", tok)
-	}()
 	switch s.currRune {
 	case '\\': // escape character
 		if s.position >= len(s.src)-1 {

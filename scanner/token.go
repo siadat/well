@@ -1,5 +1,7 @@
 package scanner
 
+import "fmt"
+
 type CmdTokenType int
 
 const (
@@ -27,6 +29,21 @@ const (
 	// «\«hello» world\»
 	// "\${hello sina" and world \}
 )
+
+func GetRight(t CmdTokenType) CmdTokenType {
+	switch t {
+	case SINGLE_QUOTE:
+		return SINGLE_QUOTE
+	case DOUBLE_QUOTE:
+		return DOUBLE_QUOTE
+	case LDOUBLE_GUILLEMET:
+		return RDOUBLE_GUILLEMET
+	case LSINGLE_GUILLEMET:
+		return RSINGLE_GUILLEMET
+	default:
+		panic(fmt.Sprintf("missing right side for %s", t))
+	}
+}
 
 func (t CmdTokenType) String() string {
 	return map[CmdTokenType]string{
