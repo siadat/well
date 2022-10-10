@@ -13,12 +13,9 @@ func TestParser(tt *testing.T) {
 	var testCases = []struct {
 		src  string
 		want *parser.Root
-		// encoded []string
-		// values map[string]interface{}
 	}{
 		{
 			src: `ls  -lash --directory -C ./something`,
-			// encoded: []string{"ls", "-lash", "--directory", "-C", "./something"},
 			want: &parser.Root{
 				[]parser.CmdNode{
 					parser.Wrd{`ls`},
@@ -35,8 +32,6 @@ func TestParser(tt *testing.T) {
 		},
 		{
 			src: `echo "Hello ${name}!"`,
-			// encoded: []string{"echo", "Hello sina!"},
-			// values:  map[string]interface{}{"name": "sina"},
 			want: &parser.Root{
 				[]parser.CmdNode{
 					parser.Wrd{`echo`},
