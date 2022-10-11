@@ -82,6 +82,6 @@ func (p *CmdParser) tokenToNode(indent int, until scanner.CmdTokenType, t scanne
 		}
 		return container, nil
 	default:
-		return nil, fmt.Errorf("unsupported token %s", t)
+		panic(fmt.Sprintf("unsupported token %s", t))
 	}
 }

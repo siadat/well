@@ -228,7 +228,7 @@ func (s *CmdScanner) getCurrPosition() (int, int) {
 func (s *CmdScanner) NextToken() (CmdToken, error) {
 	var t, err = s.nextToken()
 	s.currToken = t
-	s.PrintCursor("deferred")
+	// s.PrintCursor("deferred")
 	return t, err
 }
 
@@ -249,6 +249,9 @@ func (s *CmdScanner) nextToken() (CmdToken, error) {
 		s.readRune()
 		return tok, nil
 	case '\'':
+		tok = CmdToken{SINGLE_QUOTE, fmt.Sprintf("%c", s.currRune)}
+		s.readRune()
+		return tok, nil
 	case '"':
 		tok = CmdToken{DOUBLE_QUOTE, fmt.Sprintf("%c", s.currRune)}
 		s.readRune()

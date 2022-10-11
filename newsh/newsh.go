@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	execsh "github.com/siadat/well/exec"
+	"github.com/siadat/well/parser"
 	"gopkg.in/yaml.v3"
 )
 
@@ -84,25 +86,7 @@ func expand_str(str string, mapping func(string) string) string {
 }
 
 func Interpolate(str string, env ValMap) string {
-	return expand_str(str, func(s string) string {
-		value, ok := env[s]
-		if !ok {
-			Exit(fmt.Sprintf("missing key %q in string", s))
-		}
-		switch v := value.(type) {
-		case string:
-			return v
-		case int:
-			return fmt.Sprintf("%d", v)
-		case float64:
-			return fmt.Sprintf("%f", v)
-		case fmt.Stringer:
-			return v.String()
-		default:
-			Exit(fmt.Sprintf("unsupported key type %T for %q", v, v))
-			return ""
-		}
-	})
+	return execsh.EncodeToString(str, execsh.MappingFuncFromMap(env))
 }
 
 var global_dir string = "."
@@ -112,15 +96,16 @@ type Options struct {
 }
 
 type CmdInfo struct {
-	Time    string
-	Message string
-	Pwd     string
-	Dir     string
-	Cmd     string
-	Pipe    []string
-	Err     string
-	Stdout  string
-	Stderr  string
+	Time                string
+	Message             string
+	Pwd                 string
+	Dir                 string
+	Cmd                 string
+	CmdInterpolatedArgs []string `yaml:"cmd_interpolated_args"`
+	Pipe                []string
+	Err                 string
+	Stdout              string
+	Stderr              string
 }
 
 type CmdNode struct {
@@ -184,7 +169,7 @@ func Reverse(s string) string {
 	return string(runes)
 }
 
-func ExternalPiped(strs Pipe, opts ...Options) string {
+func externalPiped(env ValMap, strs Pipe, opts ...Options) string {
 	var ctx = context.TODO()
 	var opt Options
 	if len(opts) > 1 {
@@ -201,14 +186,22 @@ func ExternalPiped(strs Pipe, opts ...Options) string {
 	var all_words = make([][]string, len(strs))
 	for i := range cmds {
 		var str = strs[i]
-		var words = strings.SplitN(str, " ", -1)
+
+		var p = parser.NewParser()
+		var node, err = p.Parse(strings.NewReader(str))
+		if err != nil {
+			Exit(fmt.Sprintf("parsing command failed str=%q: %v", str, err))
+		}
+		var words = execsh.EncodeToCmdArgs(node, execsh.MappingFuncFromMap(env))
+		// var words = strings.SplitN(str, " ", -1)
+
 		if len(words) < 1 {
 			Exit(fmt.Sprintf("expected at least 1 word in command; got in %d", len(words)))
 			return ""
 		}
 		all_words[i] = words
 		first_words = append(first_words, words[0])
-		ctx = context.WithValue(ctx, "words", words)
+		// ctx = context.WithValue(ctx, "words", words)
 
 		stdin_closers[i] = os.Stdin
 		cmds[i] = exec.CommandContext(ctx, words[0], words[1:]...)
@@ -226,101 +219,96 @@ func ExternalPiped(strs Pipe, opts ...Options) string {
 		}
 	}
 
-	var cmdinfo_chan = make(chan CmdInfo)
+	var wg sync.WaitGroup
+	for i, cmd := range cmds {
+		wg.Add(1)
+		go func(i int, cmd *exec.Cmd) {
+			// fmt.Println("started", cmd)
+			defer func() {
+				// fmt.Println("ended", cmd)
+				wg.Done()
+				if i != len(cmds)-1 {
+					// TODO: what if it is already closed?
+					defer stdin_closers[i+1].Close()
+				}
+			}()
 
-	go func() {
-		var wg sync.WaitGroup
-		for i, cmd := range cmds {
-			wg.Add(1)
-			go func(i int, cmd *exec.Cmd) {
-				// fmt.Println("started", cmd)
-				defer func() {
-					// fmt.Println("ended", cmd)
-					wg.Done()
-					if i != len(cmds)-1 {
-						// TODO: what if it is already closed?
-						defer stdin_closers[i+1].Close()
+			var cmd_err = cmd.Run()
+
+			// log
+			if true {
+				var stdout = stdouts[i]
+				var stderr = stderrs[i]
+
+				var re_newline = regexp.MustCompile(`\r?\n`)
+				// var re_tab = regexp.MustCompile(`\t`)
+
+				var newout = stdout.String()
+				newout = re_newline.ReplaceAllString(stdout.String(), "\n")
+				// newout = re_tab.ReplaceAllString(stdout.String(), "    ")
+				newout = strings.TrimSpace(newout)
+				newout = truncate_string(newout)
+
+				var newerr = stdout.String()
+				newerr = re_newline.ReplaceAllString(stderr.String(), "\n")
+				// newerr = re_tab.ReplaceAllString(stderr.String(), "    ")
+				newerr = strings.TrimSpace(newerr)
+				newerr = truncate_string(newerr)
+
+				var pwd, pwd_err = os.Getwd()
+				if pwd_err != nil {
+					fmt.Fprintf(os.Stderr, "\nfailed to get pwd: %v\n", pwd_err)
+					os.Exit(1)
+				}
+				var marked_pipe = make([]string, len(first_words))
+				for k := range first_words {
+					if k == i {
+						marked_pipe[k] = fmt.Sprintf("%s (current)", first_words[k])
+					} else {
+						marked_pipe[k] = fmt.Sprintf("%s", first_words[k])
 					}
-				}()
-
-				var cmd_err = cmd.Run()
-
-				// log
-				if true {
-					var stdout = stdouts[i]
-					var stderr = stderrs[i]
-
-					var re_newline = regexp.MustCompile(`\r?\n`)
-					// var re_tab = regexp.MustCompile(`\t`)
-
-					var newout = stdout.String()
-					newout = re_newline.ReplaceAllString(stdout.String(), "\n")
-					// newout = re_tab.ReplaceAllString(stdout.String(), "    ")
-					newout = strings.TrimSpace(newout)
-					newout = truncate_string(newout)
-
-					var newerr = stdout.String()
-					newerr = re_newline.ReplaceAllString(stderr.String(), "\n")
-					// newerr = re_tab.ReplaceAllString(stderr.String(), "    ")
-					newerr = strings.TrimSpace(newerr)
-					newerr = truncate_string(newerr)
-
-					var pwd, pwd_err = os.Getwd()
-					if pwd_err != nil {
-						fmt.Fprintf(os.Stderr, "\nfailed to get pwd: %v\n", pwd_err)
+				}
+				var info_item = CmdInfo{
+					Time:                time.Now().Format("2006-01-02 15:04:05.999 -07:00"),
+					Cmd:                 strs[i],
+					CmdInterpolatedArgs: all_words[i],
+					Pwd:                 pwd,
+					Dir:                 cmd.Dir,
+					Pipe:                marked_pipe,
+					Stdout:              newout,
+					Stderr:              newerr,
+				}
+				if cmd_err != nil {
+					info_item.Err = cmd_err.Error()
+				}
+				{
+					// print yaml:
+					var enc = yaml.NewEncoder(os.Stderr)
+					CmdCounter += 1
+					var yaml_err = enc.Encode(map[uint64]CmdInfo{CmdCounter: info_item})
+					if yaml_err != nil {
+						fmt.Fprintf(os.Stderr, "\nyaml encoding failed with %v\n", yaml_err)
 						os.Exit(1)
 					}
-					var marked_pipe = make([]string, len(first_words))
-					for k := range first_words {
-						if k == i {
-							marked_pipe[k] = fmt.Sprintf("%s (current)", first_words[k])
-						} else {
-							marked_pipe[k] = fmt.Sprintf("%s", first_words[k])
-						}
-					}
-					var info_item = CmdInfo{
-						Time:   time.Now().Format("2006-01-02 15:04:05.999 -07:00"),
-						Cmd:    strs[i],
-						Pwd:    pwd,
-						Dir:    cmd.Dir,
-						Pipe:   marked_pipe,
-						Stdout: newout,
-						Stderr: newerr,
-					}
-					if cmd_err != nil {
-						info_item.Err = cmd_err.Error()
-					}
-					cmdinfo_chan <- info_item
 				}
+			}
 
-				if cmd_err != nil {
-					// TODO: nicer errors, eg yaml
-					if strings.Contains(cmd_err.Error(), SigpipeErrorMessage) {
-						// Fine, no-op :)
-						// broken pipe just means that the stdin of the process we
-						// were piping to is closed. That's fine, because that
-						// process might have finished its job. E.g. in `yes | head`
-						// head exits faster than yes.
-						fmt.Println("SIGPIPE received by", cmd)
-					} else {
-						Exit(fmt.Sprintf("command %q failed: %v", cmd, cmd_err))
-					}
+			if cmd_err != nil {
+				// TODO: nicer errors, eg yaml
+				if strings.Contains(cmd_err.Error(), SigpipeErrorMessage) {
+					// Fine, no-op :)
+					// broken pipe just means that the stdin of the process we
+					// were piping to is closed. That's fine, because that
+					// process might have finished its job. E.g. in `yes | head`
+					// head exits faster than yes.
+					fmt.Println("SIGPIPE received by", cmd)
+				} else {
+					Exit(fmt.Sprintf("command %q failed: %v", cmd, cmd_err))
 				}
-			}(i, cmd)
-		}
-		wg.Wait()
-		close(cmdinfo_chan)
-	}()
-
-	for info_item := range cmdinfo_chan {
-		var enc = yaml.NewEncoder(os.Stderr)
-		CmdCounter += 1
-		var yaml_err = enc.Encode(map[uint64]CmdInfo{CmdCounter: info_item})
-		if yaml_err != nil {
-			fmt.Fprintf(os.Stderr, "\nyaml encoding failed with %v\n", yaml_err)
-			os.Exit(1)
-		}
+			}
+		}(i, cmd)
 	}
+	wg.Wait()
 
 	// return the output of the last command
 	var last_stdout = stdouts[len(stdouts)-1]
@@ -331,8 +319,20 @@ func ExternalPiped(strs Pipe, opts ...Options) string {
 	}
 }
 
-func External(str string, opts ...Options) string {
-	return ExternalPiped(Pipe{str}, opts...)
+func ExternalPiped(env ValMap, strs Pipe) string {
+	return externalPiped(env, strs)
+}
+
+func ExternalPipedTrimmed(env ValMap, strs Pipe) string {
+	return externalPiped(env, strs, Options{TrimSpaces: true})
+}
+
+func External(env ValMap, str string) string {
+	return externalPiped(env, Pipe{str})
+}
+
+func ExternalTrimmed(env ValMap, str string) string {
+	return externalPiped(env, Pipe{str}, Options{TrimSpaces: true})
 }
 
 type File struct {
