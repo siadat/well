@@ -52,15 +52,15 @@ func TestEncodeToCmdArgs(tt *testing.T) {
 			want: []string{"a", `"b"`},
 		},
 		// {
-		// 	src:    `${fileA} '"${fileB}"'`, // and without <">
-		// 	want:   []string{"file A", "file B"},
+		// 	src:    `${fileA} ${fileB}`, // and without <">
+		// 	want:   []string{"file A", `file B`},
 		// 	values: map[string]interface{}{"fileA": `file A`, "fileB": `file B`},
 		// },
-		// {
-		// 	src:    `${fileA} ${fileB}`,
-		// 	want:   []string{"file", "A", "file", "B"},
-		// 	values: map[string]interface{}{"fileA": `file A`, "fileB": `file B`},
-		// },
+		{
+			src:    `${fileA:%-} ${fileB:%-}`,
+			want:   []string{"file", "A", "file", "B"},
+			values: map[string]interface{}{"fileA": `file A`, "fileB": `file B`},
+		},
 		// {
 		// 	src:    `${file1} ${file2}`,
 		// 	want:   []string{"file", "1", "file", "2"},
