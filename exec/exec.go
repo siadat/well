@@ -53,126 +53,153 @@ func EncodeToString(src string, mapping func(string) interface{}) string {
 	if err != nil {
 		panic(fmt.Sprintf("test case failed src=%q: %v", src, err))
 	}
-	var s = encode(node, false, true, mapping)
-	return strings.Join(pairLits(s), "")
+
+	var s = convertToExecNode(node, true, mapping)
+	return s.Value()
 }
 
-// TODO: refactor arg, varg, args, Pair
+// TODO: refactor arg, varg, args
+// TODO: remove Root, and replace all uses with ContainerNode
 
 func EncodeToCmdArgs(root *parser.Root, mapping func(string) interface{}) []string {
+	var ws = regexp.MustCompile(`\s`)
 	var args []string
 	// Arguments are splited by whitespace, ie any 2 parsed nodes that have no
 	// space between them should be joined as 1 argument.
-	// argBuf concatinates every parsed node in the root that is not split with
+	// buf concatinates every parsed node in the root that is not split with
 	// whitespaces. This is necessary, because for example the following input:
 	//    ." hello world "
 	// is parsed as (.) and (" hello world ") and we need to join the two, because
 	// there's no space between them, and return (." hello world ") as 1 arg.
-	var argBuf bytes.Buffer
+	var buf bytes.Buffer
+
+	var fillarg = func(fragment string) {
+		buf.WriteString(fragment)
+	}
+	var closearg = func() {
+		args = append(args, buf.String())
+		buf.Reset()
+	}
+
 	for _, item := range root.Items {
-		var arg = encode(item, true, false, mapping)
-		for _, varg := range arg {
-			fmt.Printf("%s\n", varg)
-			if varg.IsWhitespace {
-				args = append(args, argBuf.String())
-				argBuf.Reset()
-			} else {
-				argBuf.WriteString(varg.Lit)
+		var arg = convertToExecNode(item, false, mapping)
+		switch arg.(type) {
+		case ExecVar:
+			var words = ws.Split(arg.Value(), -1)
+			for i, w := range words {
+				fillarg(w)
+				if i < len(words)-1 {
+					closearg()
+				}
 			}
+		case ExecWhs:
+			closearg()
+		default:
+			fillarg(arg.Value())
 		}
 	}
 
 	// last arg
-	if argBuf.String() != "" {
-		args = append(args, argBuf.String())
+	if buf.String() != "" {
+		closearg()
 	}
 
 	return args
 }
 
-type Pair struct {
-	Lit          string
-	IsWhitespace bool
-}
-
-func (p Pair) String() string {
-	return fmt.Sprintf("Pair(%q, %v)", p.Lit, p.IsWhitespace)
-}
-
-func pairLits(pairs []Pair) []string {
-	var list []string
-	for _, v := range pairs {
-		list = append(list, v.Lit)
-	}
-	return list
-}
-
-func encode(node parser.CmdNode, ignoreWhitespace bool, escapeOuter bool, mapping func(string) interface{}) []Pair {
+func convertToExecNode(node parser.CmdNode, escapeOuter bool, mapping func(string) interface{}) ExecNode {
+	// fmt.Printf("node:%#v\n", node)
 	switch item := node.(type) {
 	case *parser.Root:
-		var args []Pair
+		var args []string
 		for _, item := range item.Items {
-			var arg = encode(item, ignoreWhitespace, escapeOuter, mapping)
-			for _, varg := range arg {
-				if !(ignoreWhitespace && varg.IsWhitespace) {
-					args = append(args, arg...)
-				}
-			}
+			var arg = convertToExecNode(item, escapeOuter, mapping)
+			args = append(args, arg.Value())
 		}
-		// return strings.Join(args, ""), false
-		return args
+		return ExecWrd{strings.Join(args, "")}
 	case parser.ContainerNode:
-		var args []Pair
+		var args []string
 		for _, item := range item.Items {
-			var arg = encode(item, false, true, mapping)
-			for _, varg := range arg {
-				args = append(args, varg)
-			}
+			var arg = convertToExecNode(item, true, mapping)
+			args = append(args, arg.Value())
 		}
+
 		if !escapeOuter {
-			return []Pair{{Lit: strings.Join(pairLits(args), ""), IsWhitespace: false}}
+			return ExecWrd{Lit: strings.Join(args, "")}
 		} else {
-			var joined = strings.Join(pairLits(args), "")
+			var joined = strings.Join(args, "")
 			switch item.Type {
 			case scanner.LDOUBLE_GUILLEMET, scanner.DOUBLE_QUOTE:
-				return []Pair{{Lit: fmt.Sprintf("%q", joined), IsWhitespace: false}}
+				return ExecWrd{Lit: fmt.Sprintf("%q", joined)}
 			case scanner.LSINGLE_GUILLEMET:
-				return []Pair{{Lit: SingleQuoteEscaper(joined), IsWhitespace: false}}
+				return ExecWrd{Lit: SingleQuoteEscaper(joined)}
 			case scanner.SINGLE_QUOTE:
-				return []Pair{{Lit: SingleQuoteEscaper(joined), IsWhitespace: false}}
+				return ExecWrd{Lit: SingleQuoteEscaper(joined)}
 			default:
 				panic(fmt.Sprintf("unsupported container %s", item.Type))
 			}
 		}
 	case parser.Whs:
-		return []Pair{{Lit: item.Lit, IsWhitespace: true}}
-	case parser.Var:
-		return formatter(mapping(item.Name), item.Opts)
+		return ExecWhs{Lit: item.Lit}
 	case parser.Wrd:
-		return []Pair{{Lit: item.Lit, IsWhitespace: false}}
+		return ExecWrd{Lit: item.Lit}
+	case parser.Var:
+		return formatterNewNew(mapping(item.Name), item.Opts, escapeOuter)
 	default:
 		panic(fmt.Sprintf("unsupported encoding for node type %T", item))
 	}
 }
 
-func formatter(v interface{}, flags string) []Pair {
+func formatterNewNew(v interface{}, flags string, escapeOuter bool) ExecNode {
+	// fmt.Printf("formatterNewNew:%#v %q\n", v, flags)
 	switch flags {
 	case "":
-		return []Pair{{Lit: fmt.Sprintf("%s", v), IsWhitespace: false}}
+		return ExecVar{Lit: fmt.Sprintf("%s", v)}
 	case "%s":
-		return []Pair{{Lit: fmt.Sprintf("%s", v), IsWhitespace: false}}
+		return ExecVar{Lit: fmt.Sprintf("%s", v)}
 	case "%f":
-		return []Pair{{Lit: fmt.Sprintf("%f", v), IsWhitespace: false}}
+		return ExecVar{Lit: fmt.Sprintf("%f", v)}
 	case "%q":
-		return []Pair{{Lit: fmt.Sprintf("%q", v), IsWhitespace: false}}
+		return convertToExecNode(
+			parser.ContainerNode{
+				Type: scanner.DOUBLE_QUOTE,
+				Items: []parser.CmdNode{
+					parser.Wrd{Lit: fmt.Sprintf("%s", v)},
+				},
+			}, escapeOuter, nil)
 	case "%Q":
-		return []Pair{{Lit: fmt.Sprintf("%Q", v), IsWhitespace: false}} // TODO: allow doing single-quote vs double-quote
+		return convertToExecNode(
+			parser.ContainerNode{
+				Type: scanner.SINGLE_QUOTE,
+				Items: []parser.CmdNode{
+					parser.Wrd{Lit: fmt.Sprintf("%s", v)},
+				},
+			}, escapeOuter, nil)
+	case "%-":
+		return ExecVar{Lit: fmt.Sprintf("%s", v)}
+	default:
+		panic(fmt.Sprintf("unsupported variable flags %q", flags))
+	}
+}
+
+func formatterNew(v interface{}, flags string) []parser.CmdNode {
+	switch flags {
+	case "":
+		return []parser.CmdNode{parser.Wrd{Lit: fmt.Sprintf("%s", v)}}
+	case "%s":
+		return []parser.CmdNode{parser.Wrd{Lit: fmt.Sprintf("%s", v)}}
+	case "%f":
+		return []parser.CmdNode{parser.Wrd{Lit: fmt.Sprintf("%f", v)}}
+	case "%q":
+		return []parser.CmdNode{parser.Wrd{Lit: fmt.Sprintf("%q", v)}}
+	case "%Q":
+		return []parser.CmdNode{parser.Wrd{Lit: fmt.Sprintf("%Q", v)}} // TODO: allow doing single-quote vs double-quote
 	case "%-":
 		var val = fmt.Sprintf("%s", v)
 		var ws = regexp.MustCompile(`\s`)
 		indexes := ws.FindAllStringIndex(val, -1)
 
-		var args []Pair
+		var args []parser.CmdNode
 
 		var last = 0
 		for i := range indexes {
@@ -180,14 +207,14 @@ func formatter(v interface{}, flags string) []Pair {
 			var wsend = indexes[i][1]
 
 			if last < wsstart {
-				args = append(args, Pair{Lit: val[last:wsstart], IsWhitespace: false})
+				args = append(args, parser.Wrd{Lit: val[last:wsstart]})
 			}
-			args = append(args, Pair{Lit: val[wsstart:wsend], IsWhitespace: true})
+			args = append(args, parser.Whs{Lit: val[wsstart:wsend]})
 			last = wsend
 		}
 
 		if last < len(val) {
-			args = append(args, Pair{Lit: val[last:], IsWhitespace: false})
+			args = append(args, parser.Wrd{Lit: val[last:]})
 		}
 
 		return args

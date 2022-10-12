@@ -31,6 +31,18 @@ func TestParser(tt *testing.T) {
 			},
 		},
 		{
+			src: `echo ${nameA} ${nameB}`,
+			want: &parser.Root{
+				[]parser.CmdNode{
+					parser.Wrd{`echo`},
+					parser.Whs{` `},
+					parser.Var{`nameA`, ``},
+					parser.Whs{` `},
+					parser.Var{`nameB`, ``},
+				},
+			},
+		},
+		{
 			src: `echo "Hello ${name}!"`,
 			want: &parser.Root{
 				[]parser.CmdNode{

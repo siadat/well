@@ -8,6 +8,8 @@ import (
 	"github.com/siadat/well/scanner"
 )
 
+// TODO: implement a pretty printer
+
 type CmdParser struct {
 	src     io.Reader
 	root    *Root
