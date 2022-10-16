@@ -143,7 +143,7 @@ func (s *CmdScanner) readVariable() CmdToken {
 }
 
 func (s *CmdScanner) readVariableFlags() string {
-	position := s.position
+	var position = s.position
 
 	if want, curr := '%', s.currRune; curr != want {
 		s.readRune() // skip
@@ -163,7 +163,7 @@ func (s *CmdScanner) readVariableFlags() string {
 }
 
 func (s *CmdScanner) readIdentifier() string {
-	position := s.position
+	var position = s.position
 	for s.isIdentifier() {
 		s.readRune()
 	}
@@ -171,7 +171,7 @@ func (s *CmdScanner) readIdentifier() string {
 }
 
 func (s *CmdScanner) readWhitespace() CmdToken {
-	position := s.position
+	var position = s.position
 	for s.isWhitespace() {
 		s.readRune()
 	}
@@ -182,7 +182,7 @@ func (s *CmdScanner) readWhitespace() CmdToken {
 }
 
 func (s *CmdScanner) readWord() CmdToken {
-	position := s.position
+	var position = s.position
 	for s.isWord() {
 		s.readRune()
 	}
@@ -193,7 +193,7 @@ func (s *CmdScanner) readWord() CmdToken {
 }
 
 func (s *CmdScanner) PrintCursor(layout string, args ...interface{}) {
-	lines := strings.Split(string(s.src), "\n")
+	var lines = strings.Split(string(s.src), "\n")
 	var b strings.Builder
 	var line, column = s.getCurrPosition()
 
