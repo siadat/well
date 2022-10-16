@@ -233,9 +233,8 @@ func (s *CmdScanner) NextToken() (CmdToken, error) {
 }
 
 func (s *CmdScanner) nextToken() (CmdToken, error) {
-	var tok = CmdToken{
-		Typ: ILLEGAL_TOKEN,
-	}
+	// NOTE: We don't need to call readRune() in the cases where a s.read*() is called.
+	//       because readRune() is already called inside those functions.
 	switch s.currRune {
 	case '\\': // escape character
 		if s.position >= len(s.src)-1 {
@@ -244,54 +243,51 @@ func (s *CmdScanner) nextToken() (CmdToken, error) {
 				Lit: "\\",
 			}, fmt.Errorf("backslash at the end of the source")
 		}
+		// TODO: Not sure if this is the correct logic
 		s.readRune() // get the next one
-		tok = CmdToken{WORD, fmt.Sprintf("%c", s.currRune)}
+		var tok = CmdToken{WORD, fmt.Sprintf("%c", s.currRune)}
 		s.readRune()
 		return tok, nil
 	case '\'':
-		tok = CmdToken{SINGLE_QUOTE, fmt.Sprintf("%c", s.currRune)}
+		var tok = CmdToken{SINGLE_QUOTE, fmt.Sprintf("%c", s.currRune)}
 		s.readRune()
 		return tok, nil
 	case '"':
-		tok = CmdToken{DOUBLE_QUOTE, fmt.Sprintf("%c", s.currRune)}
+		var tok = CmdToken{DOUBLE_QUOTE, fmt.Sprintf("%c", s.currRune)}
 		s.readRune()
 		return tok, nil
 	case '$':
-		// NOTE: we return here, because we don't want to readRune()
-		//       because readRune is already called inside readVariable
-		tok = s.readVariable()
+		var tok = s.readVariable()
 		return tok, nil
 	case '}':
+		var tok = CmdToken{ILLEGAL_TOKEN, fmt.Sprintf("%c", s.currRune)}
+		s.readRune() // skip
+		return tok, nil
 	case '«':
-		tok = CmdToken{LDOUBLE_GUILLEMET, fmt.Sprintf("%c", s.currRune)}
+		var tok = CmdToken{LDOUBLE_GUILLEMET, fmt.Sprintf("%c", s.currRune)}
 		s.readRune()
 		return tok, nil
 	case '»':
-		tok = CmdToken{RDOUBLE_GUILLEMET, fmt.Sprintf("%c", s.currRune)}
+		var tok = CmdToken{RDOUBLE_GUILLEMET, fmt.Sprintf("%c", s.currRune)}
 		s.readRune()
 		return tok, nil
 	case '‹':
-		tok = CmdToken{LSINGLE_GUILLEMET, fmt.Sprintf("%c", s.currRune)}
+		var tok = CmdToken{LSINGLE_GUILLEMET, fmt.Sprintf("%c", s.currRune)}
 		s.readRune()
 		return tok, nil
 	case '›':
-		tok = CmdToken{RSINGLE_GUILLEMET, fmt.Sprintf("%c", s.currRune)}
+		var tok = CmdToken{RSINGLE_GUILLEMET, fmt.Sprintf("%c", s.currRune)}
 		s.readRune()
 		return tok, nil
 	case ' ', '\t', '\n', '\r':
-		// NOTE: we return here, because we don't want to readRune()
-		//       because readRune is already called inside readWord
-		tok = s.readWhitespace()
+		var tok = s.readWhitespace()
 		return tok, nil
 	case 0:
-		tok = CmdToken{EOF, ""}
+		var tok = CmdToken{EOF, ""}
+		s.readRune()
+		return tok, nil
 	default:
-		// NOTE: we return here, because we don't want to readRune()
-		//       because readRune is already called inside readWord
-		tok = s.readWord()
+		var tok = s.readWord()
 		return tok, nil
 	}
-	s.readRune()
-
-	return tok, nil
 }
