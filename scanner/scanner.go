@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+// The most interesting thing about the scanner is that it includes whitespaces
+// as well. Whether whitespaces are ignore or not is a decision made by the
+// parser, not the scanner.
+
 type CmdScanner struct {
 	src          []rune
 	currToken    CmdToken
