@@ -155,8 +155,16 @@ func truncate_string(str string) string {
 	}
 
 	var middle string
-	if i2-i1 > 1 {
-		middle = fmt.Sprintf("...(%d more bytes)...", i2-i1-1)
+	var lineCount = 0
+	for i := i1; i < i2; i++ {
+		if str[i] == '\n' {
+			lineCount += 1
+		}
+	}
+
+	var truncateMessage = fmt.Sprintf("\n...(%d bytes ~%d lines truncated)...\n", i2-i1-1, lineCount)
+	if i2-i1 > len(truncateMessage) {
+		middle = truncateMessage
 	}
 	return buf1.String() + middle + Reverse(buf2.String())
 }
@@ -208,6 +216,9 @@ func externalPiped(env ValMap, strs Pipe, opts ...Options) string {
 		cmds[i].Dir = global_dir
 		cmds[i].Stdout = &stdouts[i]
 		cmds[i].Stderr = &stderrs[i]
+		if i == 0 {
+			cmds[i].Stdin = os.Stdin
+		}
 		if i > 0 {
 			var wc, pipe_err2 = cmds[i].StdinPipe()
 			if pipe_err2 != nil {
@@ -241,17 +252,17 @@ func externalPiped(env ValMap, strs Pipe, opts ...Options) string {
 				var stderr = stderrs[i]
 
 				var re_newline = regexp.MustCompile(`\r?\n`)
-				// var re_tab = regexp.MustCompile(`\t`)
+				var trailing_spaces = regexp.MustCompile(`[ ]+\n`)
 
 				var newout = stdout.String()
-				newout = re_newline.ReplaceAllString(stdout.String(), "\n")
-				// newout = re_tab.ReplaceAllString(stdout.String(), "    ")
+				newout = re_newline.ReplaceAllString(newout, "\n")
+				newout = trailing_spaces.ReplaceAllString(newout, "\n")
 				newout = strings.TrimSpace(newout)
 				newout = truncate_string(newout)
 
-				var newerr = stdout.String()
-				newerr = re_newline.ReplaceAllString(stderr.String(), "\n")
-				// newerr = re_tab.ReplaceAllString(stderr.String(), "    ")
+				var newerr = stderr.String()
+				newerr = re_newline.ReplaceAllString(newerr, "\n")
+				newerr = trailing_spaces.ReplaceAllString(newerr, "\n")
 				newerr = strings.TrimSpace(newerr)
 				newerr = truncate_string(newerr)
 
