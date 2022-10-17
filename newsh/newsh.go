@@ -86,7 +86,7 @@ func expand_str(str string, mapping func(string) string) string {
 }
 
 func Interpolate(str string, env ValMap) string {
-	return execsh.EncodeToString(str, execsh.MappingFuncFromMap(env))
+	return execsh.MustEncodeToString(str, execsh.MappingFuncFromMap(env))
 }
 
 var global_dir string = "."

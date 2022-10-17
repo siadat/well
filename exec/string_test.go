@@ -11,11 +11,28 @@ func TestEncodeToString(tt *testing.T) {
 	var testCases = []struct {
 		src    string
 		want   string
+		err    string
 		values map[string]interface{}
 	}{
 		{
 			src:  `ls  -lash --directory -C ./something`,
 			want: `ls  -lash --directory -C ./something`,
+		},
+		{
+			src:  `actual \«double\» and \‹single\› guillemets and a backslash \\`,
+			want: `actual «double» and ‹single› guillemets and a backslash \`,
+		},
+		{
+			src: `unclosed open «guillemet`,
+			err: `unclosed container`,
+		},
+		{
+			src: `double guillemet ‹closed››`,
+			err: `unexpected token RSINGLE_GUILLEMET("›")`,
+		},
+		{
+			src: `double quote "closed""`,
+			err: `unclosed container`,
 		},
 		{
 			src:    `echo "Hello ${name}!"`,
@@ -25,6 +42,11 @@ func TestEncodeToString(tt *testing.T) {
 		{
 			src:    `jq «.${key:%q} | .»`,
 			want:   `jq ".\"a long key\" | ."`,
+			values: map[string]interface{}{"key": "a long key"},
+		},
+		{
+			src:    `abc ${key:%Q}`,
+			want:   `abc $'a long key'`,
 			values: map[string]interface{}{"key": "a long key"},
 		},
 		{
@@ -49,7 +71,16 @@ func TestEncodeToString(tt *testing.T) {
 
 	for _, tc := range testCases {
 		var src = tc.src
-		var got = exec.EncodeToString(src, exec.MappingFuncFromMap(tc.values))
+		var got, err = exec.EncodeToString(src, exec.MappingFuncFromMap(tc.values))
+		if tc.err == "" {
+			if err != nil {
+				tt.Fatalf("expected no error, got: %v", err)
+			}
+		} else {
+			if err == nil || err.Error() != tc.err {
+				tt.Fatalf("expected error %q, got: %v", tc.err, err)
+			}
+		}
 		if diff := cmp.Diff(tc.want, got); diff != "" {
 			tt.Fatalf("case failed src=%q (-want +got):\n%s", src, diff)
 		}

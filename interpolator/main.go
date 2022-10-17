@@ -23,6 +23,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	var s = execsh.EncodeToString(string(byts), envMapper)
+	var s = execsh.MustEncodeToString(string(byts), envMapper)
 	fmt.Print(s)
 }

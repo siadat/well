@@ -48,7 +48,8 @@ func (p *CmdParser) parseContainerNodes(indent int, until scanner.CmdTokenType) 
 			nodes = append(nodes, n)
 		}
 		if p.scanner.Eof() {
-			return nodes, nil
+			// we should never see EOF before seeing `until'
+			return nodes, fmt.Errorf("unclosed container")
 		}
 	}
 }
@@ -84,6 +85,6 @@ func (p *CmdParser) tokenToNode(indent int, until scanner.CmdTokenType, t scanne
 		}
 		return container, nil
 	default:
-		panic(fmt.Sprintf("unsupported token %s", t))
+		return nil, fmt.Errorf("unexpected token %s", t)
 	}
 }
