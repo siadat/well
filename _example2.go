@@ -8,6 +8,20 @@ import (
 )
 
 func main() {
+	ff(123, "hello1")
+}
+
+func ff(a int, b string) {
+	files = []newsh.File{
+		{"exec/exec.go"},
+	}
+	asdasd + 2
+	fmt.Printf("a is %d and b is %q", a, b)
+	// newsh.External(nil, "ps aux")
+	newsh.External(nil, "ps aux")
+	newsh.External(nil, "ps aux")
+	return
+
 	var srcfile = "exec/exec.go" // TODO: read from commandline
 	var lines = newsh.External(
 		newsh.ValMap{

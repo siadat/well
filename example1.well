@@ -1,0 +1,26 @@
+package main
+
+import (
+	"fmt"
+
+	"github.com/siadat/well/newsh"
+)
+
+func main() {
+	MyFunc1(1, "hello1")
+	MyFunc2(2, "hello2")
+}
+
+//@newshell file "exec/exec.go"
+func MyFunc1(a int, str string) {
+	fmt.Printf("MyFunc1: a is %d and str is %q\n", a, str)
+	newsh.External(nil, "ls -lash")
+	newsh.External(nil, "pwd")
+}
+
+//@newshell file "exec/*"
+func MyFunc2(a int, str string) {
+	fmt.Printf("MyFunc2: a is %d and str is %q\n", a, str)
+	newsh.External(nil, "ls -lash ${str:%q}")
+	newsh.External(nil, "pwd")
+}
