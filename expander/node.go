@@ -1,4 +1,4 @@
-package exec
+package expander
 
 type ExecWrd struct {
 	Lit string

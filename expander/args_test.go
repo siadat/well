@@ -1,11 +1,11 @@
-package exec_test
+package expander_test
 
 import (
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/siadat/well/exec"
+	"github.com/siadat/well/expander"
 	"github.com/siadat/well/parser"
 )
 
@@ -80,7 +80,7 @@ func TestEncodeToCmdArgs(tt *testing.T) {
 		if err != nil {
 			tt.Fatalf("test case failed src=%#q:\nvalues=%#q\nerror: %v", src, tc.values, err)
 		}
-		var got = exec.EncodeToCmdArgs(node, exec.MappingFuncFromMap(tc.values))
+		var got = expander.EncodeToCmdArgs(node, expander.MappingFuncFromMap(tc.values))
 		if diff := cmp.Diff(tc.want, got); diff != "" {
 			tt.Fatalf("case failed src=%#q\nvalues=%#q\ndiff (-want +got):\n%s", src, tc.values, diff)
 		}

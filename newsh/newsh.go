@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	execsh "github.com/siadat/well/exec"
+	"github.com/siadat/well/expander"
 	"github.com/siadat/well/parser"
 	"gopkg.in/yaml.v3"
 )
@@ -86,7 +86,7 @@ func expand_str(str string, mapping func(string) string) string {
 }
 
 func Interpolate(str string, env ValMap) string {
-	return execsh.MustEncodeToString(str, execsh.MappingFuncFromMap(env))
+	return expander.MustEncodeToString(str, expander.MappingFuncFromMap(env))
 }
 
 var global_dir string = "."
@@ -200,7 +200,7 @@ func externalPiped(env ValMap, strs Pipe, opts ...Options) string {
 		if err != nil {
 			Exit(fmt.Sprintf("parsing command failed str=%q: %v", str, err))
 		}
-		var words = execsh.EncodeToCmdArgs(node, execsh.MappingFuncFromMap(env))
+		var words = expander.EncodeToCmdArgs(node, expander.MappingFuncFromMap(env))
 		// var words = strings.SplitN(str, " ", -1)
 
 		if len(words) < 1 {

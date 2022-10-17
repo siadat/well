@@ -1,10 +1,10 @@
-package exec_test
+package expander_test
 
 import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/siadat/well/exec"
+	"github.com/siadat/well/expander"
 )
 
 func TestEncodeToString(tt *testing.T) {
@@ -71,7 +71,7 @@ func TestEncodeToString(tt *testing.T) {
 
 	for _, tc := range testCases {
 		var src = tc.src
-		var got, err = exec.EncodeToString(src, exec.MappingFuncFromMap(tc.values))
+		var got, err = expander.EncodeToString(src, expander.MappingFuncFromMap(tc.values))
 		if tc.err == "" {
 			if err != nil {
 				tt.Fatalf("expected no error, got: %v", err)

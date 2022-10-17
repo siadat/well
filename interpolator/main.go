@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	execsh "github.com/siadat/well/exec"
+	"github.com/siadat/well/expander"
 )
 
 func envMapper(name string) interface{} {
@@ -23,6 +23,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	var s = execsh.MustEncodeToString(string(byts), envMapper)
+	var s = expander.MustEncodeToString(string(byts), envMapper)
 	fmt.Print(s)
 }
