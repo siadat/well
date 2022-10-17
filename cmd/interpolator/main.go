@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/siadat/well/expander"
+	"github.com/siadat/well/syntax/strs/expander"
 )
 
 func envMapper(name string) interface{} {

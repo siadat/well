@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/siadat/well/parser"
-	"github.com/siadat/well/scanner"
+	"github.com/siadat/well/syntax/strs/parser"
+	"github.com/siadat/well/syntax/strs/scanner"
 )
 
 func MappingFuncFromMap(m map[string]interface{}) func(string) interface{} {

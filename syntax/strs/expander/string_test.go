@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/siadat/well/expander"
+	"github.com/siadat/well/syntax/strs/expander"
 )
 
 func TestEncodeToString(tt *testing.T) {

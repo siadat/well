@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/siadat/well/scanner"
+	"github.com/siadat/well/syntax/strs/scanner"
 )
 
 func TestScanner(tt *testing.T) {

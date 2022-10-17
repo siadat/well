@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/siadat/well/expander"
-	"github.com/siadat/well/parser"
+	"github.com/siadat/well/syntax/strs/expander"
+	"github.com/siadat/well/syntax/strs/parser"
 	"gopkg.in/yaml.v3"
 )
 

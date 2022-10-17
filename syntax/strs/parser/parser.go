@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/siadat/well/scanner"
+	"github.com/siadat/well/syntax/strs/scanner"
 )
 
 // TODO: implement a pretty printer

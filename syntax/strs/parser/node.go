@@ -1,6 +1,6 @@
 package parser
 
-import "github.com/siadat/well/scanner"
+import "github.com/siadat/well/syntax/strs/scanner"
 
 // Wrd is an arg node
 type Wrd struct {
