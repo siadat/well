@@ -140,12 +140,6 @@ func main() {
 						fmt.Fprintf(os.Stderr, "+%s\n", rendered)
 					}
 
-					// var cmdBuilder strings.Builder
-					// for _, w := range words {
-					// 	cmdBuilder.WriteString(fmt.Sprintf("%q ", w))
-					// }
-					// fmt.Fprintf(os.Stderr, "[debug] running: %s\n", cmdBuilder.String())
-					// fmt.Fprintf(os.Stderr, "[debug] running: %#v\n", words)
 					var cmd = exec.CommandContext(context.TODO(), words[0], words[1:]...)
 					cmd.Dir = pwd
 					cmd.Stdout = os.Stdout
