@@ -1,14 +1,32 @@
 # Guillemets
 
-guillemets is a command that can be used to use guillemets characters (i.e., `«`, `»`, )
+Guillemets is a cli command which can be used to quote strings using guillemets characters (i.e., `«`, `»`, `‹`, `›`).
+
+Basically, it allows you to write this:
+```
+sh -c «sh -c «sh -c «sh -c «sh -c «date»»»»»
+```
+
+Instead of this:
+```
+sh -c "sh -c \"sh -c \\\"sh -c \\\\\\\"sh -c \\\\\\\\\\\\\\\"date\\\\\\\\\\\\\\\"\\\\\\\"\\\"\""
+```
+
+This is done using the following command:
+
+```
+guillemets exec -i 'sh -c «sh -c «sh -c «sh -c «sh -c «date»»»»»'
+```
 
 ## Install
 
 ```
-go install github.com/siadat/cmd/guillemets
+go install github.com/siadat/well/cmd/guillemets
 ```
 
 ## Basic usage
+
+There are two main sub-commands `guillemets exec` and `guillemets render`.
 
 Execute a command (show executed command):
 ```
