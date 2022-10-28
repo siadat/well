@@ -48,7 +48,7 @@ func TestParser(tt *testing.T) {
 			src: `
 			function main() {
 				let x = 3
-				external("echo «hello world»")
+				external("echo «hello ${name}»")
 			}
 			`,
 			want: &ast.Root{
@@ -72,7 +72,7 @@ func TestParser(tt *testing.T) {
 										Pos:  IgnorePos,
 									},
 									Arg: ast.ParenExpr{
-										X: ast.String{Value: `"echo «hello world»"`}},
+										X: ast.String{Root: parser.MustParseStr(`"echo «hello ${name}»"`)}},
 								},
 							},
 						},

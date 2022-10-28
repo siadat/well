@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/siadat/well/syntax/ast"
 	"github.com/siadat/well/syntax/scanner"
+	strs_parser "github.com/siadat/well/syntax/strs/parser"
 	"github.com/siadat/well/syntax/token"
 )
 
@@ -124,7 +126,7 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 	case token.STRING:
 		p.proceed()
 
-		return ast.String{Value: t.Lit}
+		return ast.String{Root: MustParseStr(t.Lit)}
 	case token.IDENTIFIER:
 		p.proceed()
 
@@ -393,6 +395,15 @@ func (p *Parser) parseFuncSignature() ast.FuncSignature {
 		ArgTypes: argTypes,
 		RetTypes: retTypes,
 	}
+}
+
+func MustParseStr(s string) *strs_parser.Root {
+	var p = strs_parser.NewParser()
+	var root, err = p.Parse(strings.NewReader(s))
+	if err != nil {
+		panic(ParseError{fmt.Errorf("failed to parse str: %w", err)})
+	}
+	return root
 }
 
 func (p *Parser) parseLetDecl() ast.Decl {

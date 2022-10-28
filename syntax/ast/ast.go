@@ -2,6 +2,7 @@ package ast
 
 import (
 	"github.com/siadat/well/syntax/scanner"
+	strs_parser "github.com/siadat/well/syntax/strs/parser"
 	"github.com/siadat/well/syntax/token"
 )
 
@@ -69,7 +70,7 @@ type Ident struct {
 }
 
 type String struct {
-	Value string
+	Root *strs_parser.Root
 }
 
 type Integer struct {
