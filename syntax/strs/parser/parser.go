@@ -14,6 +14,8 @@ type CmdParser struct {
 	src     io.Reader
 	root    *Root
 	scanner *scanner.CmdScanner
+
+	debug bool
 }
 
 func NewParser() *CmdParser {
@@ -22,12 +24,17 @@ func NewParser() *CmdParser {
 
 func (p *CmdParser) Parse(src io.Reader) (*Root, error) {
 	p.scanner = scanner.NewScanner(src)
+	p.scanner.SetDebug(p.debug)
 	var nodes, err = p.parseContainerNodes(0, scanner.EOF)
 	p.root = &Root{
 		Items: nodes,
 	}
 
 	return p.root, err
+}
+
+func (p *CmdParser) SetDebug(v bool) {
+	p.debug = v
 }
 
 func (p *CmdParser) parseContainerNodes(indent int, until scanner.CmdTokenType) ([]CmdNode, error) {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 )
 
@@ -17,6 +18,8 @@ type CmdScanner struct {
 	currRune     rune
 	position     int
 	readPosition int
+
+	debug bool
 }
 
 type CmdToken struct {
@@ -38,6 +41,10 @@ func NewScanner(src io.Reader) *CmdScanner {
 	}
 	scanner.readRune()
 	return scanner
+}
+
+func (s *CmdScanner) SetDebug(v bool) {
+	s.debug = v
 }
 
 func (s *CmdScanner) Eof() bool {
@@ -211,7 +218,7 @@ func (s *CmdScanner) PrintCursor(layout string, args ...interface{}) {
 	var prefix = fmt.Sprintf(layout, args...)
 	b.WriteString(fmt.Sprintf("%s  %s\n", prefix, lines[line]))
 	b.WriteString(fmt.Sprintf("%s  %s▲ [%d]=%s token=%s\n", prefix, strings.Repeat(" ", column), s.position, ch, s.currToken))
-	fmt.Print(b.String())
+	fmt.Fprintf(os.Stderr, b.String())
 	// fmt.Println("[debug] ", prefix, string(s.src), len(s.src), fmt.Sprintf("[%4d]=%c", s.position, s.currRune))
 }
 
@@ -232,7 +239,9 @@ func (s *CmdScanner) getCurrPosition() (int, int) {
 func (s *CmdScanner) NextToken() (CmdToken, error) {
 	var t, err = s.nextToken()
 	s.currToken = t
-	// s.PrintCursor("deferred")
+	if s.debug {
+		s.PrintCursor("[debug]")
+	}
 	return t, err
 }
 
@@ -241,17 +250,26 @@ func (s *CmdScanner) nextToken() (CmdToken, error) {
 	//       because readRune() is already called inside those functions.
 	switch s.currRune {
 	case '\\': // escape character
-		if s.position >= len(s.src)-1 {
-			return CmdToken{
-				Typ: ILLEGAL_TOKEN,
-				Lit: "\\",
-			}, fmt.Errorf("backslash at the end of the source")
-		}
 		// TODO: Not sure if this is the correct logic
+
+		var rn = s.currRune
 		s.readRune() // get the next one
-		var tok = CmdToken{WORD, fmt.Sprintf("%c", s.currRune)}
-		s.readRune()
-		return tok, nil
+
+		switch s.currRune {
+		case '«', '»', '‹', '›':
+			// if s.position >= len(s.src)-1 {
+			// 	return CmdToken{
+			// 		Typ: ILLEGAL_TOKEN,
+			// 		Lit: "\\",
+			// 	}, fmt.Errorf("backslash at the end of the source")
+			// }
+			var tok = CmdToken{WORD, fmt.Sprintf("%c", s.currRune)}
+			s.readRune()
+			return tok, nil
+		default:
+			var tok = CmdToken{WORD, fmt.Sprintf("%c", rn)}
+			return tok, nil
+		}
 	case '\'':
 		var tok = CmdToken{SINGLE_QUOTE, fmt.Sprintf("%c", s.currRune)}
 		s.readRune()

@@ -19,8 +19,8 @@ func TestEncodeToString(tt *testing.T) {
 			want: `ls  -lash --directory -C ./something`,
 		},
 		{
-			src:  `actual \«double\» and \‹single\› guillemets and a backslash \\`,
-			want: `actual «double» and ‹single› guillemets and a backslash \`,
+			src:  `actual \«double\» and \‹single\› guillemets and backslashes \ \\ \`,
+			want: `actual «double» and ‹single› guillemets and backslashes \ \\ \`,
 		},
 		{
 			src: `unclosed open «guillemet`,
@@ -71,7 +71,7 @@ func TestEncodeToString(tt *testing.T) {
 
 	for _, tc := range testCases {
 		var src = tc.src
-		var got, err = expander.EncodeToString(src, expander.MappingFuncFromMap(tc.values))
+		var got, err = expander.EncodeToString(src, expander.MappingFuncFromMap(tc.values), true)
 		if tc.err == "" {
 			if err != nil {
 				tt.Fatalf("expected no error, got: %v", err)

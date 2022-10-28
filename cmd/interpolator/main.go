@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/siadat/well/syntax/strs/expander"
@@ -19,7 +19,7 @@ func envMapper(name string) interface{} {
 }
 
 func main() {
-	var byts, err = ioutil.ReadAll(os.Stdin)
+	var byts, err = io.ReadAll(os.Stdin)
 	if err != nil {
 		panic(err)
 	}
