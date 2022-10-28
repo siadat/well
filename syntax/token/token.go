@@ -78,14 +78,14 @@ var tokens = [...]string{
 	MUL:    "MUL",
 	QUO:    "QUO",
 	REM:    "REM",
-	LPAREN: "(",
-	LBRACK: "[",
-	LBRACE: "{",
-	COMMA:  ",",
-	PERIOD: ".",
-	RPAREN: ")",
-	RBRACK: "]",
-	RBRACE: "}",
+	LPAREN: "LPAREN",
+	LBRACK: "LBRACK",
+	LBRACE: "LBRACE",
+	COMMA:  "COMMA",
+	PERIOD: "PERIOD",
+	RPAREN: "RPAREN",
+	RBRACK: "RBRACK",
+	RBRACE: "RBRACE",
 
 	FUNC:   "func",
 	RETURN: "return",
@@ -100,6 +100,8 @@ var Precedences = map[Token]Precedence{
 	SUB: 1,
 	MUL: 2,
 	QUO: 2,
+
+	LPAREN: 3,
 }
 
 func (tok Token) String() string {

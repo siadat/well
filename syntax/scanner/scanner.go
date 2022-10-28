@@ -174,11 +174,11 @@ func (s *Scanner) nextToken() (Token, error) {
 		s.readRune()
 		return tok, nil
 	case '{':
-		var tok = Token{token.LBRACK, fmt.Sprintf("%c", s.currRune), Pos(start)}
+		var tok = Token{token.LBRACE, fmt.Sprintf("%c", s.currRune), Pos(start)}
 		s.readRune()
 		return tok, nil
 	case '}':
-		var tok = Token{token.RBRACK, fmt.Sprintf("%c", s.currRune), Pos(start)}
+		var tok = Token{token.RBRACE, fmt.Sprintf("%c", s.currRune), Pos(start)}
 		s.readRune()
 		return tok, nil
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
