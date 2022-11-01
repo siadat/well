@@ -86,7 +86,11 @@ func expand_str(str string, mapping func(string) string) string {
 }
 
 func Interpolate(str string, env ValMap) string {
-	return expander.MustEncodeToString(str, expander.MappingFuncFromMap(env))
+	var s, err = expander.ParseAndEncodeToString(str, expander.MappingFuncFromMap(env), false)
+	if err != nil {
+		panic(fmt.Sprintf("test case failed src=%q: %v", str, err))
+	}
+	return s
 }
 
 var global_dir string = "."

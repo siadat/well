@@ -65,7 +65,7 @@ func main() {
 					if cCtx.Bool("debug") {
 						fmt.Fprintf(os.Stderr, "[debug] input: %q\n", input)
 					}
-					var s, err = expander.EncodeToString(input, envMapper, cCtx.Bool("debug"))
+					var s, err = expander.ParseAndEncodeToString(input, envMapper, cCtx.Bool("debug"))
 					if err != nil {
 						return err
 					}
@@ -133,7 +133,7 @@ func main() {
 					}
 
 					if cCtx.Bool("verbose") {
-						var rendered, renderErr = expander.EncodeToString(input, envMapper, cCtx.Bool("debug"))
+						var rendered, renderErr = expander.ParseAndEncodeToString(input, envMapper, cCtx.Bool("debug"))
 						if renderErr != nil {
 							return renderErr
 						}
