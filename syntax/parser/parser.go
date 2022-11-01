@@ -126,7 +126,11 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 	case token.STRING:
 		p.proceed()
 
-		return ast.String{Root: MustParseStr(t.Lit)}
+		v, err := strconv.Unquote(t.Lit)
+		if err != nil {
+			panic(ParseError{fmt.Errorf("failed to unquote string: %v", err)})
+		}
+		return ast.String{Root: MustParseStr(v)}
 	case token.IDENTIFIER:
 		p.proceed()
 
@@ -175,7 +179,7 @@ func (p *Parser) parseParenExpr() ast.ParenExpr {
 	p.expect(token.RPAREN, ")")
 	p.proceed()
 
-	return ast.ParenExpr{X: expr}
+	return ast.ParenExpr{Exprs: []ast.Expr{expr}}
 }
 
 func (p *Parser) checkErr(err error) {
@@ -205,13 +209,11 @@ func (p *Parser) parseExpr(lhs ast.Expr, minPrec token.Precedence) ast.Expr {
 
 		switch tk.Typ {
 		case token.LPAREN:
-			// TODO: allow multiple args
-			var arg = p.parseParenExpr()
+			var paren = p.parseParenExpr()
 			lhs = ast.CallExpr{
 				Fun: lhs,
-				Arg: arg,
+				Arg: paren,
 			}
-			fmt.Println(lhs)
 		default:
 			// other kinds
 			p.proceed()

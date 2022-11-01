@@ -59,6 +59,11 @@ func EncodeToString(src string, mapping func(string) interface{}, debug bool) (s
 	return s.Value(), nil
 }
 
+func EncodeToString2(root *parser.Root, mapping func(string) interface{}) (string, error) {
+	var s = convertToExecNode(root, true, mapping)
+	return s.Value(), nil
+}
+
 func MustEncodeToString(src string, mapping func(string) interface{}) string {
 	var s, err = EncodeToString(src, mapping, false)
 	if err != nil {

@@ -31,6 +31,10 @@ type ExprStmt struct {
 	X Expr
 }
 
+type ReturnStmt struct {
+	Expr Expr
+}
+
 type BinaryExpr struct {
 	X  Expr
 	Y  Expr
@@ -43,12 +47,12 @@ type UnaryExpr struct {
 }
 
 type ParenExpr struct {
-	X Expr
+	Exprs []Expr
 }
 
 type CallExpr struct {
 	Fun Expr
-	Arg Expr
+	Arg ParenExpr
 }
 
 type AssignExpr struct {
@@ -105,12 +109,14 @@ func (FuncDecl) node()      {}
 func (ExprList) node()      {}
 func (FuncSignature) node() {}
 func (ExprStmt) node()      {}
+func (ReturnStmt) node()    {}
 
 func (LetDecl) decl()  {}
 func (FuncDecl) decl() {}
 
-func (LetDecl) stmt()  {}
-func (ExprStmt) stmt() {}
+func (LetDecl) stmt()    {}
+func (ExprStmt) stmt()   {}
+func (ReturnStmt) stmt() {}
 
 func (Ident) node()      {}
 func (Integer) node()    {}

@@ -72,7 +72,12 @@ func TestParser(tt *testing.T) {
 										Pos:  IgnorePos,
 									},
 									Arg: ast.ParenExpr{
-										X: ast.String{Root: parser.MustParseStr(`"echo «hello ${name}»"`)}},
+										Exprs: []ast.Expr{
+											ast.String{
+												Root: parser.MustParseStr(`echo «hello ${name}»`),
+											},
+										},
+									},
 								},
 							},
 						},
