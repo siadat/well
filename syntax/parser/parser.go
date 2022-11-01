@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"io"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -61,9 +62,15 @@ func (p *Parser) Parse(src io.Reader) (retRoot *ast.Root, retErr error) {
 
 	defer func() {
 		var err = recover()
-		if err, ok := err.(ParseError); ok {
+		switch err := err.(type) {
+		case nil:
+			return
+		case ParseError:
 			// if p.debug { debug.PrintStack() }
 			retErr = err
+		default:
+			fmt.Printf("unexpected error: %s\n", err)
+			debug.PrintStack()
 		}
 	}()
 
@@ -78,9 +85,15 @@ func (p *Parser) ParseExpr(src io.Reader) (retExpr ast.Expr, retErr error) {
 
 	defer func() {
 		var err = recover()
-		if err, ok := err.(ParseError); ok {
+		switch err := err.(type) {
+		case nil:
+			return
+		case ParseError:
 			// if p.debug { debug.PrintStack() }
 			retErr = err
+		default:
+			fmt.Printf("unexpected error: %s\n", err)
+			debug.PrintStack()
 		}
 	}()
 	retExpr = p.parseExpr(nil, token.LowestPrecedence)

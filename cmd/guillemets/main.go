@@ -48,29 +48,29 @@ func main() {
 						Usage:   "input command or string",
 					},
 				},
-				Action: func(cCtx *cli.Context) error {
+				Action: func(cmdCtx *cli.Context) error {
 					var input string
-					if cCtx.String("input") == "-" {
+					if cmdCtx.String("input") == "-" {
 						var byts, err = io.ReadAll(os.Stdin)
 						if err != nil {
 							panic(err)
 						}
 						input = string(byts)
 					} else {
-						input = cCtx.String("input")
+						input = cmdCtx.String("input")
 					}
 					if input == "" {
 						return fmt.Errorf("nothing to execute")
 					}
-					if cCtx.Bool("debug") {
+					if cmdCtx.Bool("debug") {
 						fmt.Fprintf(os.Stderr, "[debug] input: %q\n", input)
 					}
-					var s, err = expander.ParseAndEncodeToString(input, envMapper, cCtx.Bool("debug"))
+					var s, err = expander.ParseAndEncodeToString(input, envMapper, cmdCtx.Bool("debug"))
 					if err != nil {
 						return err
 					}
 					fmt.Print(s)
-					if cCtx.Bool("newline") {
+					if cmdCtx.Bool("newline") {
 						fmt.Println()
 					}
 					return nil
@@ -95,26 +95,26 @@ func main() {
 						Usage:   "enable verbose mode",
 					},
 				},
-				Action: func(cCtx *cli.Context) error {
+				Action: func(cmdCtx *cli.Context) error {
 					var input string
-					if cCtx.String("input") == "-" {
+					if cmdCtx.String("input") == "-" {
 						var byts, err = io.ReadAll(os.Stdin)
 						if err != nil {
 							panic(err)
 						}
 						input = string(byts)
 					} else {
-						input = cCtx.String("input")
+						input = cmdCtx.String("input")
 					}
 					if input == "" {
 						return fmt.Errorf("nothing to execute")
 					}
-					if cCtx.Bool("debug") {
+					if cmdCtx.Bool("debug") {
 						fmt.Fprintf(os.Stderr, "[debug] input: %#v\n", input)
 					}
 
 					var p = parser.NewParser()
-					if cCtx.Bool("debug") {
+					if cmdCtx.Bool("debug") {
 						p.SetDebug(true)
 					}
 					var root, err = p.Parse(strings.NewReader(input))
@@ -132,8 +132,8 @@ func main() {
 						return fmt.Errorf("nothing to execute")
 					}
 
-					if cCtx.Bool("verbose") {
-						var rendered, renderErr = expander.ParseAndEncodeToString(input, envMapper, cCtx.Bool("debug"))
+					if cmdCtx.Bool("verbose") {
+						var rendered, renderErr = expander.ParseAndEncodeToString(input, envMapper, cmdCtx.Bool("debug"))
 						if renderErr != nil {
 							return renderErr
 						}
