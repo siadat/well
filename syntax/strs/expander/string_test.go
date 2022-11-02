@@ -71,7 +71,7 @@ func TestEncodeToString(tt *testing.T) {
 
 	for _, tc := range testCases {
 		var src = tc.src
-		var got, err = expander.EncodeToString(src, expander.MappingFuncFromMap(tc.values), true)
+		var got, err = expander.ParseAndEncodeToString(src, expander.MappingFuncFromMap(tc.values), true)
 		if tc.err == "" {
 			if err != nil {
 				tt.Fatalf("expected no error, got: %v", err)
