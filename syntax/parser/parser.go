@@ -38,6 +38,10 @@ func NewParser() *Parser {
 	return &Parser{}
 }
 
+func (p *Parser) MarkAt(at scanner.Pos, msg string, showWhitespaces bool) []string {
+	return p.scanner.MarkAt(at, msg, showWhitespaces)
+}
+
 func (p *Parser) init(src io.Reader) error {
 	p.scanner = scanner.NewScanner(src)
 	p.scanner.SetSkipWhitespace(true)
@@ -67,7 +71,8 @@ func (p *Parser) Parse(src io.Reader) (retRoot *ast.Root, retErr error) {
 			return
 		case ParseError:
 			// if p.debug { debug.PrintStack() }
-			retErr = err
+			var lines = p.MarkAt(p.scanner.CurrToken().Pos, err.Error(), false)
+			retErr = fmt.Errorf("%s", strings.Join(lines, "\n"))
 		default:
 			fmt.Printf("unexpected error: %s\n", err)
 			debug.PrintStack()
@@ -90,7 +95,8 @@ func (p *Parser) ParseExpr(src io.Reader) (retExpr ast.Expr, retErr error) {
 			return
 		case ParseError:
 			// if p.debug { debug.PrintStack() }
-			retErr = err
+			var lines = p.MarkAt(p.scanner.CurrToken().Pos, err.Error(), false)
+			retErr = fmt.Errorf("%s", strings.Join(lines, "\n"))
 		default:
 			fmt.Printf("unexpected error: %s\n", err)
 			debug.PrintStack()
@@ -143,11 +149,17 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 		if err != nil {
 			panic(ParseError{fmt.Errorf("failed to unquote string: %v", err)})
 		}
-		return ast.String{Root: MustParseStr(v)}
+		return ast.String{
+			Root:     MustParseStr(v),
+			Position: t.Pos,
+		}
 	case token.IDENTIFIER:
 		p.proceed()
 
-		return ast.Ident{Name: t.Lit, Pos: t.Pos}
+		return ast.Ident{
+			Name:     t.Lit,
+			Position: t.Pos,
+		}
 	case token.ADD, token.SUB:
 		var op = t.Typ
 		// signed expression, e.g. -1 or +value
@@ -159,8 +171,9 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 			token.IDENTIFIER,
 			token.LPAREN:
 			return ast.UnaryExpr{
-				X:  p.parsePrimaryExpr(),
-				Op: op,
+				X:        p.parsePrimaryExpr(),
+				Op:       op,
+				Position: t.Pos,
 			}
 		default:
 			panic(ParseError{fmt.Errorf("expected integer or float, got %s", t)})
@@ -170,13 +183,19 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 
 		var d, err = strconv.ParseInt(t.Lit, 10, 64)
 		p.checkErr(err)
-		return ast.Integer{Value: int(d)}
+		return ast.Integer{
+			Value:    int(d),
+			Position: t.Pos,
+		}
 	case token.FLOAT:
 		p.proceed()
 
 		var f, err = strconv.ParseFloat(t.Lit, 64)
 		p.checkErr(err)
-		return ast.Float{Value: f}
+		return ast.Float{
+			Value:    f,
+			Position: t.Pos,
+		}
 	case token.LPAREN:
 		return p.parseParenExpr()
 	default:
@@ -186,13 +205,36 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 
 func (p *Parser) parseParenExpr() ast.ParenExpr {
 	p.expect(token.LPAREN, "(")
+	var pos = p.scanner.CurrToken().Pos
 	p.proceed()
-	var expr = p.parseExpr(nil, token.LowestPrecedence)
+
+	var exprs []ast.Expr
+For:
+	for {
+		var tk = p.scanner.CurrToken()
+		switch tk.Typ {
+		case token.RPAREN:
+			break For
+		case token.NEWLINE:
+			p.skipOptionalNewlines()
+		case token.COMMA:
+			// This allows multiple commas as in `(1, 2,,,)`, I don't care atm,
+			// because there probably will be a formatter that removes them and
+			// converts it to `(1, 2)`
+			p.proceed()
+		default:
+			var expr = p.parseExpr(nil, token.LowestPrecedence)
+			exprs = append(exprs, expr)
+		}
+	}
 
 	p.expect(token.RPAREN, ")")
 	p.proceed()
 
-	return ast.ParenExpr{Exprs: []ast.Expr{expr}}
+	return ast.ParenExpr{
+		Exprs:    exprs,
+		Position: pos,
+	}
 }
 
 func (p *Parser) checkErr(err error) {
@@ -202,13 +244,13 @@ func (p *Parser) checkErr(err error) {
 }
 
 func (p *Parser) parseExpr(lhs ast.Expr, minPrec token.Precedence) ast.Expr {
-	// TODO: support parsing CallExpr
 	if lhs == nil {
 		lhs = p.parsePrimaryExpr()
 	}
 
 	for {
 		var tk = p.scanner.CurrToken()
+		var pos = tk.Pos
 		var prec, isStillExpr = token.Precedences[tk.Typ]
 		if !isStillExpr {
 			return lhs
@@ -224,8 +266,9 @@ func (p *Parser) parseExpr(lhs ast.Expr, minPrec token.Precedence) ast.Expr {
 		case token.LPAREN:
 			var paren = p.parseParenExpr()
 			lhs = ast.CallExpr{
-				Fun: lhs,
-				Arg: paren,
+				Fun:      lhs,
+				Arg:      paren,
+				Position: lhs.Pos(),
 			}
 		default:
 			// other kinds
@@ -233,9 +276,10 @@ func (p *Parser) parseExpr(lhs ast.Expr, minPrec token.Precedence) ast.Expr {
 
 			var rhs = p.parseExpr(nil, prec)
 			lhs = ast.BinaryExpr{
-				X:  lhs,
-				Y:  rhs,
-				Op: tk.Typ,
+				X:        lhs,
+				Y:        rhs,
+				Op:       tk.Typ,
+				Position: pos,
 			}
 		}
 	}
@@ -243,15 +287,20 @@ func (p *Parser) parseExpr(lhs ast.Expr, minPrec token.Precedence) ast.Expr {
 
 // parseAssignExpr returns an expr that might be an AssignExpr
 func (p *Parser) parseAssignExpr() ast.Expr {
+	var pos = p.scanner.CurrToken().Pos
 	switch firstToken := p.scanner.CurrToken(); firstToken.Typ {
 	case token.IDENTIFIER:
-		var firstIdent = ast.Ident{Name: firstToken.Lit, Pos: firstToken.Pos}
+		var firstIdent = ast.Ident{
+			Name:     firstToken.Lit,
+			Position: firstToken.Pos,
+		}
 		p.proceed()
 		if t := p.scanner.CurrToken(); t.Typ == token.ASSIGN && t.Lit == "=" {
 			p.proceed()
 			return ast.AssignExpr{
-				Name: firstIdent.Name,
-				Expr: p.parseExpr(nil, token.LowestPrecedence),
+				Name:     firstIdent.Name,
+				Expr:     p.parseExpr(nil, token.LowestPrecedence),
+				Position: pos,
 			}
 		} else {
 			return p.parseExpr(firstIdent, token.LowestPrecedence)
@@ -262,13 +311,13 @@ func (p *Parser) parseAssignExpr() ast.Expr {
 	}
 }
 
-func (p *Parser) skipOptionalNewlines() error {
+func (p *Parser) skipOptionalNewlines() {
 	for {
 		var t = p.scanner.CurrToken()
 		if t.Typ == token.NEWLINE {
 			p.proceed()
 		} else {
-			return nil
+			return
 		}
 	}
 }
@@ -290,13 +339,15 @@ func (p *Parser) expectType(typ token.Token) scanner.Token {
 }
 
 func (p *Parser) parseExprList() ast.ExprList {
-	var list ast.ExprList
+	var list = ast.ExprList{
+		Position: p.scanner.CurrToken().Pos,
+	}
 
 	switch t1 := p.scanner.CurrToken(); t1.Typ {
 	case token.LBRACK:
 		p.proceed()
 		for {
-			p.checkErr(p.skipOptionalNewlines())
+			p.skipOptionalNewlines()
 			switch tk := p.scanner.CurrToken(); tk.Typ {
 			case token.RBRACK:
 				p.proceed()
@@ -311,7 +362,7 @@ func (p *Parser) parseExprList() ast.ExprList {
 				case token.COMMA:
 					p.proceed()
 				case token.NEWLINE:
-					p.checkErr(p.skipOptionalNewlines())
+					p.skipOptionalNewlines()
 				case token.RBRACK:
 					p.proceed()
 				default:
@@ -327,6 +378,7 @@ func (p *Parser) parseExprList() ast.ExprList {
 }
 
 func (p *Parser) parseFuncDecl() ast.Decl {
+	var pos = p.scanner.CurrToken().Pos
 	p.expect(token.IDENTIFIER, "function")
 	p.proceed()
 
@@ -366,6 +418,7 @@ func (p *Parser) parseFuncDecl() ast.Decl {
 		Name:       name.Lit,
 		Signature:  signature,
 		Statements: stmts,
+		Position:   pos,
 	}
 }
 
@@ -379,13 +432,18 @@ func (p *Parser) parseStmt() ast.Stmt {
 
 	switch t.Typ {
 	case token.IDENTIFIER:
-		return ast.ExprStmt{X: p.parseExpr(nil, token.LowestPrecedence)}
+		var pos = p.scanner.CurrToken().Pos
+		return ast.ExprStmt{
+			X:        p.parseExpr(nil, token.LowestPrecedence),
+			Position: pos,
+		}
 	default:
 		panic(ParseError{fmt.Errorf("failed to parse a stmt, unexpected %s", t)})
 	}
 }
 
 func (p *Parser) parseFuncSignature() ast.FuncSignature {
+	var pos = p.scanner.CurrToken().Pos
 	p.expect(token.LPAREN, "(")
 	p.proceed()
 
@@ -409,6 +467,7 @@ func (p *Parser) parseFuncSignature() ast.FuncSignature {
 		ArgNames: argNames,
 		ArgTypes: argTypes,
 		RetTypes: retTypes,
+		Position: pos,
 	}
 }
 
@@ -422,6 +481,7 @@ func MustParseStr(s string) *strs_parser.Root {
 }
 
 func (p *Parser) parseLetDecl() ast.Decl {
+	var pos = p.scanner.CurrToken().Pos
 	p.expect(token.IDENTIFIER, "let")
 	p.proceed()
 
@@ -434,7 +494,8 @@ func (p *Parser) parseLetDecl() ast.Decl {
 	var rhs = p.parseExpr(nil, token.LowestPrecedence)
 
 	return ast.LetDecl{
-		Name: name.Lit,
-		Rhs:  rhs,
+		Name:     name.Lit,
+		Rhs:      rhs,
+		Position: pos,
 	}
 }

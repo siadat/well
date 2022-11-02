@@ -33,13 +33,19 @@ func TestParser(tt *testing.T) {
 							ArgNames: nil,
 							ArgTypes: nil,
 							RetTypes: nil,
+							Position: 17,
 						},
 						Statements: []ast.Stmt{
 							ast.LetDecl{
 								Name: "x",
-								Rhs:  ast.Integer{Value: 3},
+								Rhs: ast.Integer{
+									Value:    3,
+									Position: 34,
+								},
+								Position: 26,
 							},
 						},
+						Position: 4,
 					},
 				},
 			},
@@ -59,28 +65,38 @@ func TestParser(tt *testing.T) {
 							ArgNames: nil,
 							ArgTypes: nil,
 							RetTypes: nil,
+							Position: 17,
 						},
 						Statements: []ast.Stmt{
 							ast.LetDecl{
 								Name: "x",
-								Rhs:  ast.Integer{Value: 3},
+								Rhs: ast.Integer{
+									Value:    3,
+									Position: 34,
+								},
+								Position: 26,
 							},
 							ast.ExprStmt{
 								X: ast.CallExpr{
 									Fun: ast.Ident{
-										Name: "external",
-										Pos:  IgnorePos,
+										Name:     "external",
+										Position: 40,
 									},
 									Arg: ast.ParenExpr{
 										Exprs: []ast.Expr{
 											ast.String{
-												Root: parser.MustParseStr(`echo «hello ${name}»`),
+												Root:     parser.MustParseStr(`echo «hello ${name}»`),
+												Position: 49,
 											},
 										},
+										Position: 48,
 									},
+									Position: 40,
 								},
+								Position: 40,
 							},
 						},
+						Position: 4,
 					},
 				},
 			},

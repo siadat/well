@@ -398,6 +398,28 @@ func (s *Scanner) readNumber() (Token, error) {
 	}
 }
 
+func (s *Scanner) MarkAt(at Pos, msg string, showWhitespaces bool) []string {
+	var lines = strings.Split(string(s.src), "\n")
+	var line, column = s.getLineColAt(at)
+
+	var prefix = ""
+	var linestr = lines[line]
+	if showWhitespaces {
+		linestr = strings.ReplaceAll(lines[line], "\t", "␣")
+		if line == len(lines)-1 {
+			linestr = linestr + "·"
+		} else {
+			linestr = linestr + "⏎"
+		}
+	}
+	return []string{
+		fmt.Sprintf("%s%s", prefix, linestr),
+		fmt.Sprintf("%s%s⌃", prefix, strings.Repeat(" ", column)),
+		fmt.Sprintf("%s%s│", prefix, strings.Repeat(" ", column)),
+		fmt.Sprintf("%s%s╰─── at line %d: %s", prefix, strings.Repeat(" ", column), line, msg),
+	}
+}
+
 func (s *Scanner) PrintCursor(layout string, args ...interface{}) {
 	var lines = strings.Split(string(s.src), "\n")
 	var b strings.Builder
@@ -433,10 +455,10 @@ func (s *Scanner) PrintCursor(layout string, args ...interface{}) {
 	fmt.Print(b.String())
 }
 
-func (s *Scanner) getCurrPosition() (int, int) {
+func (s *Scanner) getLineColAt(pos Pos) (int, int) {
 	var line = 0
 	var column = 0
-	for i := 0; i < s.position && i < len(s.src); i++ {
+	for i := 0; i < int(pos) && i < len(s.src); i++ {
 		if s.src[i] == '\n' {
 			line += 1
 			column = 0
@@ -445,4 +467,8 @@ func (s *Scanner) getCurrPosition() (int, int) {
 		}
 	}
 	return line, column
+}
+
+func (s *Scanner) getCurrPosition() (int, int) {
+	return s.getLineColAt(Pos(s.position))
 }
