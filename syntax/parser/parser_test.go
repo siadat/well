@@ -28,7 +28,10 @@ func TestParser(tt *testing.T) {
 			want: &ast.Root{
 				Decls: []ast.Decl{
 					ast.FuncDecl{
-						Name: "main",
+						Name: ast.Ident{
+							Name:     "main",
+							Position: 13,
+						},
 						Signature: ast.FuncSignature{
 							ArgNames: nil,
 							ArgTypes: nil,
@@ -37,7 +40,10 @@ func TestParser(tt *testing.T) {
 						},
 						Statements: []ast.Stmt{
 							ast.LetDecl{
-								Name: "x",
+								Name: ast.Ident{
+									Name:     "x",
+									Position: 30,
+								},
 								Rhs: ast.Integer{
 									Value:    3,
 									Position: 34,
@@ -60,7 +66,10 @@ func TestParser(tt *testing.T) {
 			want: &ast.Root{
 				Decls: []ast.Decl{
 					ast.FuncDecl{
-						Name: "main",
+						Name: ast.Ident{
+							Name:     "main",
+							Position: 13,
+						},
 						Signature: ast.FuncSignature{
 							ArgNames: nil,
 							ArgTypes: nil,
@@ -69,7 +78,10 @@ func TestParser(tt *testing.T) {
 						},
 						Statements: []ast.Stmt{
 							ast.LetDecl{
-								Name: "x",
+								Name: ast.Ident{
+									Name:     "x",
+									Position: 30,
+								},
 								Rhs: ast.Integer{
 									Value:    3,
 									Position: 34,
@@ -110,7 +122,7 @@ func TestParser(tt *testing.T) {
 		var got, err = p.Parse(strings.NewReader(src))
 		src = formatSrc(src, true)
 		if err != nil {
-			tt.Fatalf("test case failed\nsrc:\n%s\nerr: %v", src, err)
+			tt.Fatalf("test case failed\nsrc:\n%s\nerr:\n%s", src, err)
 		}
 
 		var cmpOpt = cmp.FilterValues(func(p1, p2 scanner.Pos) bool { return p1 == IgnorePos || p2 == IgnorePos || p1 == p2 }, cmp.Ignore())

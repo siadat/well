@@ -280,7 +280,7 @@ func (s *Scanner) readIdentifier() (Token, error) {
 			token.ILLEGAL,
 			fmt.Sprintf("%c", s.currRune),
 			Pos(s.position),
-		}, fmt.Errorf("unexpected identifier character %c", s.currRune)
+		}, fmt.Errorf("invalid identifier character %q", s.currRune)
 	}
 }
 
@@ -412,11 +412,23 @@ func (s *Scanner) MarkAt(at Pos, msg string, showWhitespaces bool) []string {
 			linestr = linestr + "⏎"
 		}
 	}
+
+	var indent strings.Builder
+	for i := 0; i < column; i++ {
+		var ch = []rune(linestr)[i]
+		switch ch {
+		case ' ', '\t':
+			// add a tab, if it is a tab
+			indent.WriteRune(ch)
+		default:
+			indent.WriteRune(' ')
+		}
+	}
 	return []string{
 		fmt.Sprintf("%s%s", prefix, linestr),
-		fmt.Sprintf("%s%s⌃", prefix, strings.Repeat(" ", column)),
-		fmt.Sprintf("%s%s│", prefix, strings.Repeat(" ", column)),
-		fmt.Sprintf("%s%s╰─── at line %d: %s", prefix, strings.Repeat(" ", column), line, msg),
+		fmt.Sprintf("%s%s⌃", prefix, indent.String()),
+		fmt.Sprintf("%s%s│", prefix, indent.String()),
+		fmt.Sprintf("%s%s╰─── at line %d column %d: %s", prefix, indent.String(), line, column, msg),
 	}
 }
 

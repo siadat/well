@@ -40,7 +40,7 @@ func TestParser(tt *testing.T) {
 		env.SetDebug(true)
 		gotResult, err := interp.Eval(strings.NewReader(tc.src), env)
 		if err != nil {
-			tt.Fatalf("eval failed (test case %d)\nsrc:\n%s\nerr: %v", ti, src, err)
+			tt.Fatalf("eval failed (test case %d)\nsrc:\n%s\nerr:\n%s", ti, src, err)
 		}
 
 		if diff := cmp.Diff(tc.wantObj, gotResult); diff != "" {

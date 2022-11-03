@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/siadat/well/interpreter"
+	"github.com/siadat/well/types"
 	"github.com/urfave/cli/v2"
 )
 
@@ -37,10 +38,18 @@ func main() {
 					},
 				},
 				Action: func(cmdCtx *cli.Context) error {
-					var byts, err = os.ReadFile(cmdCtx.String("file"))
-					if err != nil {
-						return err
+					var byts, readErr = os.ReadFile(cmdCtx.String("file"))
+					if readErr != nil {
+						return readErr
 					}
+
+					checker := types.NewChecker()
+					checker.SetDebug(cmdCtx.Bool("debug"))
+					var _, checkErr = checker.Check(bytes.NewReader(byts))
+					if checkErr != nil {
+						return checkErr
+					}
+
 					interp := interpreter.NewInterpreter(os.Stdout, os.Stderr)
 					interp.SetVerbose(cmdCtx.Bool("verbose"))
 					env := interpreter.NewEnvironment()

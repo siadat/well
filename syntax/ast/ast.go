@@ -19,14 +19,14 @@ type FuncSignature struct {
 }
 
 type LetDecl struct {
-	Name string
+	Name Ident
 	Rhs  Expr
 
 	Position scanner.Pos
 }
 
 type FuncDecl struct {
-	Name       string
+	Name       Ident
 	Signature  FuncSignature
 	Statements []Stmt
 

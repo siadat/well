@@ -114,12 +114,12 @@ func (interp *Interpreter) getMainFuncDecl(file *ast.Root) *ast.FuncDecl {
 	for _, decl := range file.Decls {
 		switch decl := decl.(type) {
 		case *ast.FuncDecl:
-			if decl.Name == "main" {
+			if decl.Name.Name == "main" {
 				return decl
 			}
 		}
 	}
-	panic(interp.NewInterpError(-1, "missing main func declaration"))
+	panic(interp.newError(-1, "missing main func declaration"))
 }
 
 func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
@@ -159,7 +159,7 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 
 			var userErr = funcDef.Func(positionals, keywords)
 			if userErr != nil {
-				panic(interp.NewInterpError(node.Pos(), "%s", userErr))
+				panic(interp.newError(node.Pos(), "%s", userErr))
 			}
 			return nil
 		case *Function:
@@ -190,7 +190,7 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			}
 			return nil
 		default:
-			panic(interp.NewInterpError(node.Pos(), "unsupported function type %T", funcDef))
+			panic(interp.newError(node.Pos(), "unsupported function type %T", funcDef))
 		}
 	case ast.ReturnStmt:
 		return &ReturnStmt{Expr: interp.eval(node.Expr, env)}
@@ -201,12 +201,12 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			if b, ok := interp.builtins()[node.Name]; ok {
 				return b
 			}
-			panic(interp.NewInterpError(node.Pos(), "ident %q not found: %v", node.Name, err))
+			panic(interp.newError(node.Pos(), "ident %q not found: %v", node.Name, err))
 		}
 		return val
 	case ast.FuncDecl:
-		env.MustSet(node.Name, &Function{
-			Name:      node.Name,
+		env.MustSet(node.Name.Name, &Function{
+			Name:      node.Name.Name,
 			Signature: node.Signature,
 			Body:      node.Statements,
 			Env:       env,
@@ -220,20 +220,20 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 	case ast.Float:
 		return &Float{Value: node.Value}
 	case ast.LetDecl:
-		env.MustSet(node.Name, interp.eval(node.Rhs, env))
+		env.MustSet(node.Name.Name, interp.eval(node.Rhs, env))
 		return nil
 	case ast.String:
 		var envFunc = func(name string) interface{} {
 			val, err := env.Get(name)
 			if err != nil {
-				panic(interp.NewInterpError(node.Pos(), "ident %q not found: %v", name, err))
+				panic(interp.newError(node.Pos(), "ident %q not found: %v", name, err))
 			}
 			return val
 		}
 
 		var rendered, err = expander.EncodeToString(node.Root, envFunc)
 		if err != nil {
-			panic(interp.NewInterpError(node.Pos(), "failed to render string: %v", err))
+			panic(interp.newError(node.Pos(), "failed to render string: %v", err))
 		}
 		if interp.Verbose {
 			fmt.Fprintf(interp.Stderr, "+%s\n", rendered)
@@ -245,7 +245,7 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			AsArgs:   words,
 		}
 	default:
-		panic(interp.NewInterpError(node.Pos(), "unsupported node type %T", node))
+		panic(interp.newError(node.Pos(), "unsupported node type %T", node))
 	}
 }
 
@@ -257,7 +257,7 @@ func (i InterpError) Error() string {
 	return i.err.Error()
 }
 
-func (interp *Interpreter) NewInterpError(pos scanner.Pos, f string, args ...any) error {
+func (interp *Interpreter) newError(pos scanner.Pos, f string, args ...any) error {
 	var lines = interp.parser.MarkAt(pos, fmt.Sprintf(f, args...), false)
 	return InterpError{fmt.Errorf("%s", strings.Join(lines, "\n"))}
 }

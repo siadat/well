@@ -382,6 +382,7 @@ func (p *Parser) parseFuncDecl() ast.Decl {
 	p.expect(token.IDENTIFIER, "function")
 	p.proceed()
 
+	var identPos = p.scanner.CurrToken().Pos
 	var name = p.expectType(token.IDENTIFIER)
 	p.proceed()
 
@@ -415,7 +416,7 @@ func (p *Parser) parseFuncDecl() ast.Decl {
 	p.proceed()
 
 	return ast.FuncDecl{
-		Name:       name.Lit,
+		Name:       ast.Ident{Name: name.Lit, Position: identPos},
 		Signature:  signature,
 		Statements: stmts,
 		Position:   pos,
@@ -485,6 +486,7 @@ func (p *Parser) parseLetDecl() ast.Decl {
 	p.expect(token.IDENTIFIER, "let")
 	p.proceed()
 
+	var namePos = p.scanner.CurrToken().Pos
 	var name = p.expectType(token.IDENTIFIER)
 	p.proceed()
 
@@ -494,7 +496,10 @@ func (p *Parser) parseLetDecl() ast.Decl {
 	var rhs = p.parseExpr(nil, token.LowestPrecedence)
 
 	return ast.LetDecl{
-		Name:     name.Lit,
+		Name: ast.Ident{
+			Name:     name.Lit,
+			Position: namePos,
+		},
 		Rhs:      rhs,
 		Position: pos,
 	}
