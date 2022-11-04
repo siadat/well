@@ -243,7 +243,10 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			fmt.Fprintf(interp.Stderr, "+%s\n", rendered)
 		}
 
-		var words = expander.EncodeToCmdArgs(node.Root, envFunc)
+		var words, encodeErr = expander.EncodeToCmdArgs(node.Root, envFunc)
+		if encodeErr != nil {
+			panic(interp.newError(node.Pos(), "failed to create args: %s", encodeErr))
+		}
 		return &String{
 			AsSingle: rendered,
 			AsArgs:   words,

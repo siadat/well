@@ -204,7 +204,11 @@ func externalPiped(env ValMap, strs Pipe, opts ...Options) string {
 		if err != nil {
 			Exit(fmt.Sprintf("parsing command failed str=%q: %v", str, err))
 		}
-		var words = expander.EncodeToCmdArgs(node, expander.MappingFuncFromMap(env))
+		var words, encodeErr = expander.EncodeToCmdArgs(node, expander.MappingFuncFromMap(env))
+		if encodeErr != nil {
+			Exit(fmt.Sprintf("failed to create args: %s", encodeErr))
+			return ""
+		}
 		// var words = strings.SplitN(str, " ", -1)
 
 		if len(words) < 1 {

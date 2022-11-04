@@ -80,7 +80,10 @@ func TestEncodeToCmdArgs(tt *testing.T) {
 		if err != nil {
 			tt.Fatalf("test case failed src=%#q:\nvalues=%#q\nerror: %v", src, tc.values, err)
 		}
-		var got = expander.EncodeToCmdArgs(node, expander.MappingFuncFromMap(tc.values))
+		var got, encodeErr = expander.EncodeToCmdArgs(node, expander.MappingFuncFromMap(tc.values))
+		if err != nil {
+			tt.Fatalf("test case failed src=%#q:\nvalues=%#q\nerror: %v", src, tc.values, encodeErr)
+		}
 		if diff := cmp.Diff(tc.want, got); diff != "" {
 			tt.Fatalf("case failed src=%#q\nvalues=%#q\ndiff (-want +got):\n%s", src, tc.values, diff)
 		}

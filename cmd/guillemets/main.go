@@ -122,7 +122,10 @@ func main() {
 						return fmt.Errorf("failed to parse command: %v", err)
 					}
 
-					var words = expander.EncodeToCmdArgs(root, envMapper)
+					var words, encodeErr = expander.EncodeToCmdArgs(root, envMapper)
+					if encodeErr != nil {
+						return fmt.Errorf("failed to create args: %s", encodeErr)
+					}
 					var pwd, pwdErr = os.Getwd()
 					if pwdErr != nil {
 						return fmt.Errorf("failed to get current working directory: %s", pwdErr)
