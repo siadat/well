@@ -27,24 +27,24 @@ func TestParser(tt *testing.T) {
 			`,
 			want: &ast.Root{
 				Decls: []ast.Decl{
-					ast.FuncDecl{
-						Name: ast.Ident{
+					&ast.FuncDecl{
+						Name: &ast.Ident{
 							Name:     "main",
 							Position: 13,
 						},
-						Signature: ast.FuncSignature{
+						Signature: &ast.FuncSignature{
 							ArgNames: nil,
 							ArgTypes: nil,
 							RetTypes: nil,
 							Position: 17,
 						},
 						Statements: []ast.Stmt{
-							ast.LetDecl{
-								Name: ast.Ident{
+							&ast.LetDecl{
+								Name: &ast.Ident{
 									Name:     "x",
 									Position: 30,
 								},
-								Rhs: ast.Integer{
+								Rhs: &ast.Integer{
 									Value:    3,
 									Position: 34,
 								},
@@ -65,38 +65,38 @@ func TestParser(tt *testing.T) {
 			`,
 			want: &ast.Root{
 				Decls: []ast.Decl{
-					ast.FuncDecl{
-						Name: ast.Ident{
+					&ast.FuncDecl{
+						Name: &ast.Ident{
 							Name:     "main",
 							Position: 13,
 						},
-						Signature: ast.FuncSignature{
+						Signature: &ast.FuncSignature{
 							ArgNames: nil,
 							ArgTypes: nil,
 							RetTypes: nil,
 							Position: 17,
 						},
 						Statements: []ast.Stmt{
-							ast.LetDecl{
-								Name: ast.Ident{
+							&ast.LetDecl{
+								Name: &ast.Ident{
 									Name:     "x",
 									Position: 30,
 								},
-								Rhs: ast.Integer{
+								Rhs: &ast.Integer{
 									Value:    3,
 									Position: 34,
 								},
 								Position: 26,
 							},
-							ast.ExprStmt{
-								X: ast.CallExpr{
-									Fun: ast.Ident{
+							&ast.ExprStmt{
+								X: &ast.CallExpr{
+									Fun: &ast.Ident{
 										Name:     "external",
 										Position: 40,
 									},
-									Arg: ast.ParenExpr{
+									Arg: &ast.ParenExpr{
 										Exprs: []ast.Expr{
-											ast.String{
+											&ast.String{
 												Root:     parser.MustParseStr(`echo «hello ${name}»`),
 												Position: 49,
 											},

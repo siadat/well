@@ -19,15 +19,15 @@ type FuncSignature struct {
 }
 
 type LetDecl struct {
-	Name Ident
+	Name *Ident
 	Rhs  Expr
 
 	Position scanner.Pos
 }
 
 type FuncDecl struct {
-	Name       Ident
-	Signature  FuncSignature
+	Name       *Ident
+	Signature  *FuncSignature
 	Statements []Stmt
 
 	Position scanner.Pos
@@ -68,7 +68,7 @@ type ParenExpr struct {
 
 type CallExpr struct {
 	Fun Expr
-	Arg ParenExpr
+	Arg *ParenExpr
 
 	Position scanner.Pos
 }
@@ -133,56 +133,56 @@ type Decl interface {
 	decl()
 }
 
-func (Root) node()          {}
-func (LetDecl) node()       {}
-func (FuncDecl) node()      {}
-func (ExprList) node()      {}
-func (FuncSignature) node() {}
-func (ExprStmt) node()      {}
-func (ReturnStmt) node()    {}
-func (Ident) node()         {}
-func (Integer) node()       {}
-func (String) node()        {}
-func (Float) node()         {}
-func (BinaryExpr) node()    {}
-func (UnaryExpr) node()     {}
-func (ParenExpr) node()     {}
-func (AssignExpr) node()    {}
-func (File) node()          {}
-func (CallExpr) node()      {}
+func (*Root) node()          {}
+func (*LetDecl) node()       {}
+func (*FuncDecl) node()      {}
+func (*ExprList) node()      {}
+func (*FuncSignature) node() {}
+func (*ExprStmt) node()      {}
+func (*ReturnStmt) node()    {}
+func (*Ident) node()         {}
+func (*Integer) node()       {}
+func (*String) node()        {}
+func (*Float) node()         {}
+func (*BinaryExpr) node()    {}
+func (*UnaryExpr) node()     {}
+func (*ParenExpr) node()     {}
+func (*AssignExpr) node()    {}
+func (*File) node()          {}
+func (*CallExpr) node()      {}
 
-func (e Root) Pos() scanner.Pos          { return -1 }
-func (e LetDecl) Pos() scanner.Pos       { return e.Position }
-func (e FuncDecl) Pos() scanner.Pos      { return e.Position }
-func (e ExprList) Pos() scanner.Pos      { return e.Position }
-func (e FuncSignature) Pos() scanner.Pos { return e.Position }
-func (e ExprStmt) Pos() scanner.Pos      { return e.Position }
-func (e ReturnStmt) Pos() scanner.Pos    { return e.Position }
-func (e Ident) Pos() scanner.Pos         { return e.Position }
-func (e Integer) Pos() scanner.Pos       { return e.Position }
-func (e String) Pos() scanner.Pos        { return e.Position }
-func (e Float) Pos() scanner.Pos         { return e.Position }
-func (e BinaryExpr) Pos() scanner.Pos    { return e.Position }
-func (e UnaryExpr) Pos() scanner.Pos     { return e.Position }
-func (e ParenExpr) Pos() scanner.Pos     { return e.Position }
-func (e AssignExpr) Pos() scanner.Pos    { return e.Position }
-func (e File) Pos() scanner.Pos          { return -1 }
-func (e CallExpr) Pos() scanner.Pos      { return e.Position }
+func (e *Root) Pos() scanner.Pos          { return -1 }
+func (e *LetDecl) Pos() scanner.Pos       { return e.Position }
+func (e *FuncDecl) Pos() scanner.Pos      { return e.Position }
+func (e *ExprList) Pos() scanner.Pos      { return e.Position }
+func (e *FuncSignature) Pos() scanner.Pos { return e.Position }
+func (e *ExprStmt) Pos() scanner.Pos      { return e.Position }
+func (e *ReturnStmt) Pos() scanner.Pos    { return e.Position }
+func (e *Ident) Pos() scanner.Pos         { return e.Position }
+func (e *Integer) Pos() scanner.Pos       { return e.Position }
+func (e *String) Pos() scanner.Pos        { return e.Position }
+func (e *Float) Pos() scanner.Pos         { return e.Position }
+func (e *BinaryExpr) Pos() scanner.Pos    { return e.Position }
+func (e *UnaryExpr) Pos() scanner.Pos     { return e.Position }
+func (e *ParenExpr) Pos() scanner.Pos     { return e.Position }
+func (e *AssignExpr) Pos() scanner.Pos    { return e.Position }
+func (e *File) Pos() scanner.Pos          { return -1 }
+func (e *CallExpr) Pos() scanner.Pos      { return e.Position }
 
-func (Ident) expr()      {}
-func (Integer) expr()    {}
-func (String) expr()     {}
-func (Float) expr()      {}
-func (BinaryExpr) expr() {}
-func (UnaryExpr) expr()  {}
-func (ParenExpr) expr()  {}
-func (AssignExpr) expr() {}
-func (File) expr()       {}
-func (CallExpr) expr()   {}
+func (*Ident) expr()      {}
+func (*Integer) expr()    {}
+func (*String) expr()     {}
+func (*Float) expr()      {}
+func (*BinaryExpr) expr() {}
+func (*UnaryExpr) expr()  {}
+func (*ParenExpr) expr()  {}
+func (*AssignExpr) expr() {}
+func (*File) expr()       {}
+func (*CallExpr) expr()   {}
 
-func (LetDecl) decl()  {}
-func (FuncDecl) decl() {}
+func (*LetDecl) decl()  {}
+func (*FuncDecl) decl() {}
 
-func (LetDecl) stmt()    {}
-func (ExprStmt) stmt()   {}
-func (ReturnStmt) stmt() {}
+func (*LetDecl) stmt()    {}
+func (*ExprStmt) stmt()   {}
+func (*ReturnStmt) stmt() {}

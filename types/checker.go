@@ -60,34 +60,35 @@ func (tc typeChecker) check(node ast.Node) {
 		for _, decl := range node.Decls {
 			tc.check(decl)
 		}
-	case ast.ParenExpr:
+	case *ast.ParenExpr:
 		for _, expr := range node.Exprs {
 			tc.check(expr)
 		}
-	case ast.ExprStmt:
+	case *ast.ExprStmt:
 		tc.check(node.X)
-	case ast.CallExpr:
+	case *ast.CallExpr:
+		tc.types[node] = WellType{"Function"}
 		tc.types[node.Fun] = WellType{"Function"}
 		tc.check(node.Arg)
-	case ast.ReturnStmt:
+	case *ast.ReturnStmt:
 		tc.check(node.Expr)
-	case ast.Ident:
+	case *ast.Ident:
 		// NoOp
-	case ast.FuncSignature:
+	case *ast.FuncSignature:
 		// TODO
-	case ast.FuncDecl:
+	case *ast.FuncDecl:
 		tc.types[node.Name] = WellType{"Function"}
 		tc.check(node.Signature)
 		for _, stmt := range node.Statements {
 			tc.check(stmt)
 		}
-	case ast.Integer:
+	case *ast.Integer:
 		tc.types[node] = WellType{"Integer"}
-	case ast.Float:
+	case *ast.Float:
 		tc.types[node] = WellType{"Float"}
-	case ast.String:
+	case *ast.String:
 		tc.types[node] = WellType{"String"}
-	case ast.LetDecl:
+	case *ast.LetDecl:
 		tc.check(node.Rhs)
 		tc.types[node.Name] = tc.types[node.Rhs]
 	default:

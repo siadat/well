@@ -131,21 +131,21 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 		for _, decl := range node.Decls {
 			interp.eval(decl, env)
 		}
-		return interp.eval(ast.CallExpr{
-			Fun: ast.Ident{Name: "main", Position: -1},
-			Arg: ast.ParenExpr{
+		return interp.eval(&ast.CallExpr{
+			Fun: &ast.Ident{Name: "main", Position: -1},
+			Arg: &ast.ParenExpr{
 				Exprs: nil,
 			},
 		}, env)
-	case ast.ParenExpr:
+	case *ast.ParenExpr:
 		var objs []Object
 		for _, expr := range node.Exprs {
 			objs = append(objs, interp.eval(expr, env))
 		}
 		return &Paren{Objects: objs}
-	case ast.ExprStmt:
+	case *ast.ExprStmt:
 		return interp.eval(node.X, env)
-	case ast.CallExpr:
+	case *ast.CallExpr:
 		funcDef := interp.eval(node.Fun, env)
 		switch funcDef := funcDef.(type) {
 		case *Builtin:
@@ -196,9 +196,9 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 		default:
 			panic(interp.newError(node.Pos(), "unsupported function type %T", funcDef))
 		}
-	case ast.ReturnStmt:
+	case *ast.ReturnStmt:
 		return &ReturnStmt{Expr: interp.eval(node.Expr, env)}
-	case ast.Ident:
+	case *ast.Ident:
 		val, err := env.Get(node.Name)
 		if err != nil {
 			// try builtins:
@@ -208,7 +208,7 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			panic(interp.newError(node.Pos(), "ident %q not found: %v", node.Name, err))
 		}
 		return val
-	case ast.FuncDecl:
+	case *ast.FuncDecl:
 		env.MustSet(node.Name.Name, &Function{
 			Name:      node.Name.Name,
 			Signature: node.Signature,
@@ -219,14 +219,14 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 		// language are not expressions atm. If in the futre you want to
 		// support anonymous function, return the Function here.
 		return nil
-	case ast.Integer:
+	case *ast.Integer:
 		return &Integer{Value: node.Value}
-	case ast.Float:
+	case *ast.Float:
 		return &Float{Value: node.Value}
-	case ast.LetDecl:
+	case *ast.LetDecl:
 		env.MustSet(node.Name.Name, interp.eval(node.Rhs, env))
 		return nil
-	case ast.String:
+	case *ast.String:
 		var envFunc = func(name string) interface{} {
 			val, err := env.Get(name)
 			if err != nil {

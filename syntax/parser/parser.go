@@ -149,14 +149,14 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 		if err != nil {
 			panic(ParseError{fmt.Errorf("failed to unquote string: %v", err)})
 		}
-		return ast.String{
+		return &ast.String{
 			Root:     MustParseStr(v),
 			Position: t.Pos,
 		}
 	case token.IDENTIFIER:
 		p.proceed()
 
-		return ast.Ident{
+		return &ast.Ident{
 			Name:     t.Lit,
 			Position: t.Pos,
 		}
@@ -170,7 +170,7 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 			token.FLOAT,
 			token.IDENTIFIER,
 			token.LPAREN:
-			return ast.UnaryExpr{
+			return &ast.UnaryExpr{
 				X:        p.parsePrimaryExpr(),
 				Op:       op,
 				Position: t.Pos,
@@ -183,7 +183,7 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 
 		var d, err = strconv.ParseInt(t.Lit, 10, 64)
 		p.checkErr(err)
-		return ast.Integer{
+		return &ast.Integer{
 			Value:    int(d),
 			Position: t.Pos,
 		}
@@ -192,7 +192,7 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 
 		var f, err = strconv.ParseFloat(t.Lit, 64)
 		p.checkErr(err)
-		return ast.Float{
+		return &ast.Float{
 			Value:    f,
 			Position: t.Pos,
 		}
@@ -203,7 +203,7 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 	}
 }
 
-func (p *Parser) parseParenExpr() ast.ParenExpr {
+func (p *Parser) parseParenExpr() *ast.ParenExpr {
 	p.expect(token.LPAREN, "(")
 	var pos = p.scanner.CurrToken().Pos
 	p.proceed()
@@ -231,7 +231,7 @@ For:
 	p.expect(token.RPAREN, ")")
 	p.proceed()
 
-	return ast.ParenExpr{
+	return &ast.ParenExpr{
 		Exprs:    exprs,
 		Position: pos,
 	}
@@ -265,7 +265,7 @@ func (p *Parser) parseExpr(lhs ast.Expr, minPrec token.Precedence) ast.Expr {
 		switch tk.Typ {
 		case token.LPAREN:
 			var paren = p.parseParenExpr()
-			lhs = ast.CallExpr{
+			lhs = &ast.CallExpr{
 				Fun:      lhs,
 				Arg:      paren,
 				Position: lhs.Pos(),
@@ -275,7 +275,7 @@ func (p *Parser) parseExpr(lhs ast.Expr, minPrec token.Precedence) ast.Expr {
 			p.proceed()
 
 			var rhs = p.parseExpr(nil, prec)
-			lhs = ast.BinaryExpr{
+			lhs = &ast.BinaryExpr{
 				X:        lhs,
 				Y:        rhs,
 				Op:       tk.Typ,
@@ -290,14 +290,14 @@ func (p *Parser) parseAssignExpr() ast.Expr {
 	var pos = p.scanner.CurrToken().Pos
 	switch firstToken := p.scanner.CurrToken(); firstToken.Typ {
 	case token.IDENTIFIER:
-		var firstIdent = ast.Ident{
+		var firstIdent = &ast.Ident{
 			Name:     firstToken.Lit,
 			Position: firstToken.Pos,
 		}
 		p.proceed()
 		if t := p.scanner.CurrToken(); t.Typ == token.ASSIGN && t.Lit == "=" {
 			p.proceed()
-			return ast.AssignExpr{
+			return &ast.AssignExpr{
 				Name:     firstIdent.Name,
 				Expr:     p.parseExpr(nil, token.LowestPrecedence),
 				Position: pos,
@@ -415,9 +415,9 @@ func (p *Parser) parseFuncDecl() ast.Decl {
 	p.expect(token.RBRACE, "}")
 	p.proceed()
 
-	return ast.FuncDecl{
-		Name:       ast.Ident{Name: name.Lit, Position: identPos},
-		Signature:  signature,
+	return &ast.FuncDecl{
+		Name:       &ast.Ident{Name: name.Lit, Position: identPos},
+		Signature:  &signature,
 		Statements: stmts,
 		Position:   pos,
 	}
@@ -434,7 +434,7 @@ func (p *Parser) parseStmt() ast.Stmt {
 	switch t.Typ {
 	case token.IDENTIFIER:
 		var pos = p.scanner.CurrToken().Pos
-		return ast.ExprStmt{
+		return &ast.ExprStmt{
 			X:        p.parseExpr(nil, token.LowestPrecedence),
 			Position: pos,
 		}
@@ -496,8 +496,8 @@ func (p *Parser) parseLetDecl() ast.Decl {
 
 	var rhs = p.parseExpr(nil, token.LowestPrecedence)
 
-	return ast.LetDecl{
-		Name: ast.Ident{
+	return &ast.LetDecl{
+		Name: &ast.Ident{
 			Name:     name.Lit,
 			Position: namePos,
 		},
