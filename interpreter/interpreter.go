@@ -5,10 +5,10 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"runtime/debug"
 	"strings"
 	"time"
 
+	"github.com/siadat/well/erroring"
 	"github.com/siadat/well/syntax/ast"
 	"github.com/siadat/well/syntax/parser"
 	"github.com/siadat/well/syntax/scanner"
@@ -59,8 +59,8 @@ func (interp *Interpreter) evalParsed(node ast.Node, env Environment) (obj Objec
 			// if interp.Debug { debug.PrintStack() }
 			retErr = err
 		default:
-			fmt.Printf("unexpected error: %s\n", err)
-			debug.PrintStack()
+			fmt.Printf("unexpected error while interpreting: %s\n", err)
+			erroring.PrintTrace()
 		}
 	}()
 	interp.eval(node, env)
@@ -163,12 +163,16 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			}
 			return nil
 		case *Function:
+			if call, decl := len(node.Arg.Exprs), len(funcDef.Signature.ArgNames); call != decl {
+				panic(interp.newError(node.Arg.Pos(), "%s takes %d args, call is sending %d arg", funcDef, decl, call))
+			}
+
 			var positionalArgNames []string
 			for _, param := range funcDef.Signature.ArgNames {
 				positionalArgNames = append(positionalArgNames, param)
 			}
 
-			positionalIdx := 0
+			var positionalIdx = 0
 			newEnv := env.NewScope()
 			for _, arg := range node.Arg.Exprs {
 				obj := interp.eval(arg, env)

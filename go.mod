@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/google/go-cmp v0.5.9
 	github.com/kr/pretty v0.3.1
+	github.com/maruel/panicparse/v2 v2.3.1
 	github.com/urfave/cli/v2 v2.20.3
 	gopkg.in/yaml.v3 v3.0.1
 )

@@ -3,9 +3,9 @@ package types
 import (
 	"fmt"
 	"io"
-	"runtime/debug"
 	"strings"
 
+	"github.com/siadat/well/erroring"
 	"github.com/siadat/well/syntax/ast"
 	"github.com/siadat/well/syntax/parser"
 	"github.com/siadat/well/syntax/scanner"
@@ -44,8 +44,8 @@ func (tc typeChecker) Check(src io.Reader) (types map[ast.Expr]Type, retErr erro
 			// if interp.Debug { debug.PrintStack() }
 			retErr = err
 		default:
-			fmt.Printf("unexpected error: %s\n", err)
-			debug.PrintStack()
+			fmt.Printf("unexpected error while type-checking: %s\n", err)
+			erroring.PrintTrace()
 		}
 	}()
 

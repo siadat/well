@@ -3,10 +3,10 @@ package parser
 import (
 	"fmt"
 	"io"
-	"runtime/debug"
 	"strconv"
 	"strings"
 
+	"github.com/siadat/well/erroring"
 	"github.com/siadat/well/syntax/ast"
 	"github.com/siadat/well/syntax/scanner"
 	strs_parser "github.com/siadat/well/syntax/strs/parser"
@@ -74,8 +74,8 @@ func (p *Parser) Parse(src io.Reader) (retRoot *ast.Root, retErr error) {
 			var lines = p.MarkAt(p.scanner.CurrToken().Pos, err.Error(), false)
 			retErr = fmt.Errorf("%s", strings.Join(lines, "\n"))
 		default:
-			fmt.Printf("unexpected error: %s\n", err)
-			debug.PrintStack()
+			fmt.Printf("unexpected error while parsing: %s\n", err)
+			erroring.PrintTrace()
 		}
 	}()
 
@@ -98,8 +98,8 @@ func (p *Parser) ParseExpr(src io.Reader) (retExpr ast.Expr, retErr error) {
 			var lines = p.MarkAt(p.scanner.CurrToken().Pos, err.Error(), false)
 			retErr = fmt.Errorf("%s", strings.Join(lines, "\n"))
 		default:
-			fmt.Printf("unexpected error: %s\n", err)
-			debug.PrintStack()
+			fmt.Printf("unexpected error while parsing: %s\n", err)
+			erroring.PrintTrace()
 		}
 	}()
 	retExpr = p.parseExpr(nil, token.LowestPrecedence)
@@ -456,6 +456,7 @@ func (p *Parser) parseFuncSignature() ast.FuncSignature {
 		if t.Typ == token.RPAREN && t.Lit == ")" {
 			break
 		}
+		p.proceed()
 		// TODO: parse argNames and argTypes
 	}
 
