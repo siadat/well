@@ -251,7 +251,7 @@ func (s *Scanner) nextToken() (Token, error) {
 		} else {
 			return s.readComment()
 		}
-	case '"':
+	case '"', '`':
 		return s.readString(s.currRune)
 	case ' ', '\t':
 		if s.skipWhitespace {
@@ -268,31 +268,32 @@ func (s *Scanner) nextToken() (Token, error) {
 		s.readRune()
 		return tok, nil
 	default:
+		if !s.isIdentifierPartFirst() {
+			return Token{
+				token.ILLEGAL,
+				fmt.Sprintf("%c", s.currRune),
+				Pos(s.position),
+			}, fmt.Errorf("invalid identifier character %q", s.currRune)
+		}
 		return s.readIdentifier()
-	}
-}
-
-func (s *Scanner) readIdentifier() (Token, error) {
-	if s.isIdentifierPartFirst() {
-		return s.readIdentifierUnquoted()
-	} else {
-		return Token{
-			token.ILLEGAL,
-			fmt.Sprintf("%c", s.currRune),
-			Pos(s.position),
-		}, fmt.Errorf("invalid identifier character %q", s.currRune)
 	}
 }
 
 func (s *Scanner) readString(ender rune) (Token, error) {
 	var position = s.position
-	s.readRune() // skip opener, i.e. "
+	s.readRune() // skip opener, e.g. "
+
+	var raw = ender == '`'
 
 	for {
 		switch s.currRune {
 		case '\\':
-			s.readRune() // skip \
-			s.readRune() // skip the char after \
+			if raw {
+				s.readRune()
+			} else {
+				s.readRune() // skip \
+				s.readRune() // skip the char after \
+			}
 		case ender:
 			s.readRune()
 			return Token{
@@ -341,7 +342,7 @@ func (s *Scanner) isWhitespace() bool {
 	return ' ' == ch || '\t' == ch
 }
 
-func (s *Scanner) readIdentifierUnquoted() (Token, error) {
+func (s *Scanner) readIdentifier() (Token, error) {
 	var position = s.position
 	s.readRune()
 	for s.isIdentifierMiddle() {

@@ -65,9 +65,9 @@ func TestIdentifier(tt *testing.T) {
 			src: `
 			func main(
 			  verbose    bool,
-			  first_name string,
+			  first_name123 string,
 			) {
-			  let out, err = external("echo hello «${first_name}!»")
+			  let out, err = external("echo hello «${first_name123}!»")
 			}
 			`,
 			want: []scanner.Token{
@@ -82,7 +82,7 @@ func TestIdentifier(tt *testing.T) {
 				{token.COMMA, `,`, IgnorePos},
 				{token.NEWLINE, "\n", IgnorePos},
 
-				{token.IDENTIFIER, `first_name`, IgnorePos},
+				{token.IDENTIFIER, `first_name123`, IgnorePos},
 				{token.IDENTIFIER, `string`, IgnorePos},
 				{token.COMMA, `,`, IgnorePos},
 				{token.NEWLINE, "\n", IgnorePos},
@@ -98,7 +98,7 @@ func TestIdentifier(tt *testing.T) {
 				{token.ASSIGN, `=`, IgnorePos},
 				{token.IDENTIFIER, `external`, IgnorePos},
 				{token.LPAREN, `(`, IgnorePos},
-				{token.STRING, `"echo hello «${first_name}!»"`, IgnorePos},
+				{token.STRING, `"echo hello «${first_name123}!»"`, IgnorePos},
 				{token.RPAREN, `)`, IgnorePos},
 				{token.NEWLINE, "\n", IgnorePos},
 
