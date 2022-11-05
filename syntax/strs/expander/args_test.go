@@ -20,6 +20,15 @@ func TestEncodeToCmdArgs(tt *testing.T) {
 			want: []string{"ls", "-lash", "--directory", "-C", "./something"},
 		},
 		{
+			// new lines and an empty line
+			src: `
+			ls  -lash
+			    --directory
+				-C "\n"
+			`,
+			want: []string{"ls", "-lash", "--directory", "-C", `\n`},
+		},
+		{
 			src:    `echo "Hello ${name}!"`,
 			want:   []string{"echo", "Hello sina!"},
 			values: map[string]interface{}{"name": "sina"},

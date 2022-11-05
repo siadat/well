@@ -10,6 +10,8 @@ import (
 	"github.com/siadat/well/syntax/strs/scanner"
 )
 
+var WhitespaceRe = regexp.MustCompile(`\s`)
+
 func MappingFuncFromMap(m map[string]interface{}) func(string) interface{} {
 	return func(name string) interface{} {
 		var v, ok = m[name]
@@ -74,23 +76,27 @@ func EncodeToString(root *parser.Root, mapping func(string) interface{}) (string
 // TODO: remove Root, and replace all uses with ContainerNode
 
 func EncodeToCmdArgs(root *parser.Root, mapping func(string) interface{}) ([]string, error) {
-	var ws = regexp.MustCompile(`\s`)
 	var args []string
 	// Arguments are splited by whitespace, ie any 2 parsed nodes that have no
 	// space between them should be joined as 1 argument.
-	// buf concatinates every parsed node in the root that is not split with
+	// currArgBuf concatinates every parsed node in the root that is not split with
 	// whitespaces. This is necessary, because for example the following input:
 	//    ." hello world "
 	// is parsed as (.) and (" hello world ") and we need to join the two, because
 	// there's no space between them, and return (." hello world ") as 1 arg.
-	var buf bytes.Buffer
+	var currArgBuf bytes.Buffer
 
-	var fillarg = func(fragment string) {
-		buf.WriteString(fragment)
+	var growArg = func(fragment string) {
+		currArgBuf.WriteString(fragment)
 	}
-	var closearg = func() {
-		args = append(args, buf.String())
-		buf.Reset()
+
+	var commitArg = func() {
+		if currArgBuf.String() == "" {
+			// nothing to commit
+			return
+		}
+		args = append(args, currArgBuf.String())
+		currArgBuf.Reset()
 	}
 
 	for _, item := range root.Items {
@@ -100,30 +106,30 @@ func EncodeToCmdArgs(root *parser.Root, mapping func(string) interface{}) ([]str
 		}
 		switch arg.(type) {
 		case ExecVar:
-			var words = ws.Split(arg.Value(), -1)
+			var words = WhitespaceRe.Split(arg.Value(), -1)
 			for i, w := range words {
-				fillarg(w)
+				growArg(w)
 				if i < len(words)-1 {
-					closearg()
+					commitArg()
 				}
 			}
 		case ExecWhs:
-			closearg()
+			commitArg()
 		default:
-			fillarg(arg.Value())
+			growArg(arg.Value())
 		}
 	}
 
 	// last arg
-	if buf.String() != "" {
-		closearg()
+	if currArgBuf.String() != "" {
+		commitArg()
 	}
 
 	return args, nil
 }
 
 func convertToExecNode(node parser.CmdNode, escapeOuter bool, mapping func(string) interface{}) (ExecNode, error) {
-	// fmt.Printf("node:%#v\n", node)
+	// fmt.Printf("[---] convertToExecNode: %#v\n", node)
 	switch item := node.(type) {
 	case *parser.Root:
 		var args []string
@@ -221,8 +227,7 @@ func formatterNew(v interface{}, flags string) []parser.CmdNode {
 		return []parser.CmdNode{parser.Wrd{Lit: fmt.Sprintf("%Q", v)}} // TODO: allow doing single-quote vs double-quote
 	case "%-":
 		var val = fmt.Sprintf("%s", v)
-		var ws = regexp.MustCompile(`\s`)
-		indexes := ws.FindAllStringIndex(val, -1)
+		indexes := WhitespaceRe.FindAllStringIndex(val, -1)
 
 		var args []parser.CmdNode
 
