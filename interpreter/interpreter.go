@@ -81,7 +81,7 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 				if interp.Debug {
 					fmt.Printf("args are (%d):\n", len(arg.AsArgs))
 					for i, a := range arg.AsArgs {
-						fmt.Printf("  [%d]: %s\n", i, a)
+						fmt.Printf("  [%d]: %q\n", i, a)
 					}
 				}
 				cmd.Stdout = interp.Stdout
@@ -131,11 +131,11 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 				if interp.Debug {
 					fmt.Printf("args are (%d):\n", len(arg.AsArgs))
 					for i, a := range arg.AsArgs {
-						fmt.Printf("  [%d]: %s\n", i, a)
+						fmt.Printf("  [%d]: %q\n", i, a)
 					}
 				}
 				cmd.Stdout = &buf
-				cmd.Stderr = &buf
+				cmd.Stderr = interp.Stderr
 				if err := cmd.Run(); err != nil {
 					return nil, fmt.Errorf("external command failed: %v, output:\n%s\nEOF", err, buf.String())
 				}
