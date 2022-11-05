@@ -147,10 +147,13 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 
 		v, err := strconv.Unquote(t.Lit)
 		if err != nil {
+			if p.debug {
+				fmt.Printf("failed to unquote %q\n", t.Lit)
+			}
 			panic(ParseError{fmt.Errorf("failed to unquote string: %v", err)})
 		}
 		return &ast.String{
-			Root:     MustParseStr(v),
+			Root:     MustParseStr(v, p.debug),
 			Position: t.Pos,
 		}
 	case token.IDENTIFIER:
@@ -473,11 +476,13 @@ func (p *Parser) parseFuncSignature() ast.FuncSignature {
 	}
 }
 
-func MustParseStr(s string) *strs_parser.Root {
+func MustParseStr(s string, debug bool) *strs_parser.Root {
 	var p = strs_parser.NewParser()
 	var root, err = p.Parse(strings.NewReader(s))
 	if err != nil {
-		// if debug { fmt.Printf("failed parsing %q", s) }
+		if debug {
+			fmt.Printf("failed parsing %q\n", s)
+		}
 		panic(ParseError{fmt.Errorf("failed to parse str %q: %w", s, err)})
 	}
 	return root

@@ -36,9 +36,9 @@ var testCases = []struct {
 			&ast.Ident{Name: "y", Position: 59}: types.WellType{"Float"},
 			&ast.Ident{Name: "z", Position: 81}: types.WellType{"Integer"},
 
-			&ast.Integer{Value: 123, Position: 85}:                        types.WellType{"Integer"},
-			&ast.Float{Value: 3.14, Position: 63}:                         types.WellType{"Float"},
-			&ast.String{Root: parser.MustParseStr("hello"), Position: 38}: types.WellType{"String"},
+			&ast.Integer{Value: 123, Position: 85}:                              types.WellType{"Integer"},
+			&ast.Float{Value: 3.14, Position: 63}:                               types.WellType{"Float"},
+			&ast.String{Root: parser.MustParseStr("hello", true), Position: 38}: types.WellType{"String"},
 
 			// ast.Ident{Name: "external", Position: 92}: types.WellType{"Function"},
 			// ast.Ident{Name: "x", Position: 101}:       types.WellType{"String"},
