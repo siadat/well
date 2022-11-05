@@ -22,30 +22,43 @@ func MappingFuncFromMap(m map[string]interface{}) func(string) interface{} {
 	}
 }
 
-type SingleQuotingVariant int
+type QuotingVariant int
 
 const (
-	// Just use backslash to escape inner single-quotes
-	Basic SingleQuotingVariant = iota
+	// Just use backslash to escape ' and "
+	Basic QuotingVariant = iota
 	// BashAnsiCVariant returns $'it\'s great' instead of 'it\'s great'.
 	// The dollar sign is required for bash, otherwise it won't work.
 	// https://stackoverflow.com/questions/6697753/difference-between-single-and-double-quotes-in-bash/42082956#42082956
+	// TODO: This mode must also replace ` with \`, but so far I decided not to support it.
+	// TODO: Remove this variant. I don't want to support Bash syntax. Anything you do with Bash should be possible with Well.
 	BashAnsiCVariant
 )
 
-var singleQuotingVariant = BashAnsiCVariant
+var quotingVariant = Basic // BashAnsiCVariant
 
 // TODO: this is a toy implemntation, please rewrite, see also: strconv.Quote
-func SingleQuoteEscaper(s string) string {
+func EscapeQuote(s string, typ scanner.CmdTokenType) (string, error) {
+	switch typ {
+	case scanner.LDOUBLE_GUILLEMET, scanner.DOUBLE_QUOTE:
+		return fmt.Sprintf("%q", s), nil
+	case scanner.LSINGLE_GUILLEMET, scanner.SINGLE_QUOTE:
+		return EscapeSinglequote(s), nil
+	default:
+		return "", fmt.Errorf("unsupported quote %s", typ)
+	}
+}
+
+func EscapeSinglequote(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, `'`, `\'`)
-	switch singleQuotingVariant {
+	switch quotingVariant {
 	case BashAnsiCVariant:
 		return fmt.Sprintf("$'%s'", s)
 	case Basic:
 		return fmt.Sprintf("'%s'", s)
 	default:
-		panic(fmt.Sprintf("unsupported singleQuotingVariant %d", singleQuotingVariant))
+		panic(fmt.Sprintf("unsupported quotingVariant %d", quotingVariant))
 	}
 }
 
@@ -129,7 +142,7 @@ func EncodeToCmdArgs(root *parser.Root, mapping func(string) interface{}) ([]str
 }
 
 func convertToExecNode(node parser.CmdNode, escapeOuter bool, mapping func(string) interface{}) (ExecNode, error) {
-	// fmt.Printf("[---] convertToExecNode: %#v\n", node)
+	// fmt.Printf("[---] convertToExecNode: %#v (escapeOuter=%v)\n", node, escapeOuter)
 	switch item := node.(type) {
 	case *parser.Root:
 		var args []string
@@ -151,20 +164,15 @@ func convertToExecNode(node parser.CmdNode, escapeOuter bool, mapping func(strin
 			args = append(args, arg.Value())
 		}
 
+		var s = strings.Join(args, "")
 		if !escapeOuter {
-			return ExecWrd{Lit: strings.Join(args, "")}, nil
+			return ExecWrd{Lit: s}, nil
 		} else {
-			var joined = strings.Join(args, "")
-			switch item.Type {
-			case scanner.LDOUBLE_GUILLEMET, scanner.DOUBLE_QUOTE:
-				return ExecWrd{Lit: fmt.Sprintf("%q", joined)}, nil
-			case scanner.LSINGLE_GUILLEMET:
-				return ExecWrd{Lit: SingleQuoteEscaper(joined)}, nil
-			case scanner.SINGLE_QUOTE:
-				return ExecWrd{Lit: SingleQuoteEscaper(joined)}, nil
-			default:
-				panic(fmt.Sprintf("unsupported container %s", item.Type))
+			var s, err = EscapeQuote(s, item.Type)
+			if err != nil {
+				panic(err)
 			}
+			return ExecWrd{Lit: s}, nil
 		}
 	case parser.Whs:
 		return ExecWhs{Lit: item.Lit}, nil
@@ -182,7 +190,7 @@ func convertToExecNode(node parser.CmdNode, escapeOuter bool, mapping func(strin
 }
 
 func formatterNewNew(v interface{}, flags string, escapeOuter bool) (ExecNode, error) {
-	// fmt.Printf("formatterNewNew:%#v %q\n", v, flags)
+	// fmt.Printf("[===] formatterNewNew:%#v flags=%q\n", v, flags)
 	switch flags {
 	case "":
 		return ExecVar{Lit: fmt.Sprintf("%s", v)}, nil

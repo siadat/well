@@ -55,7 +55,7 @@ func TestEncodeToString(tt *testing.T) {
 		},
 		{
 			src:    `abc ${key:%Q}`,
-			want:   `abc $'a long key'`,
+			want:   `abc 'a long key'`,
 			values: map[string]interface{}{"key": "a long key"},
 		},
 		{
@@ -73,7 +73,7 @@ func TestEncodeToString(tt *testing.T) {
 		},
 		{
 			src:    `echo ‹echo ‹echo ‹${name}›››`,
-			want:   `echo $'echo $\'echo $\\\'O\\\\\\\'Reilly\\\'\''`,
+			want:   `echo 'echo \'echo \\\'O\\\\\\\'Reilly\\\'\''`,
 			values: map[string]interface{}{"name": "O'Reilly"},
 		},
 	}

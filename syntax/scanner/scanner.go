@@ -429,7 +429,7 @@ func (s *Scanner) MarkAt(at Pos, msg string, showWhitespaces bool) []string {
 		fmt.Sprintf("%s%s", prefix, linestr),
 		fmt.Sprintf("%s%s⌃", prefix, indent.String()),
 		fmt.Sprintf("%s%s│", prefix, indent.String()),
-		fmt.Sprintf("%s%s╰─── at line %d column %d: %s", prefix, indent.String(), line, column, msg),
+		fmt.Sprintf("%s%s╰─── at line %d column %d: %s", prefix, indent.String(), line+1, column+1, msg),
 	}
 }
 

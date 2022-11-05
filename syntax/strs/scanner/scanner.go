@@ -172,12 +172,8 @@ func (s *CmdScanner) readVariableFlags() string {
 	}
 	s.readRune() // skip
 
-	switch s.currRune {
-	case '-', 'f', 's', 'q', 'Q': // ok
+	for s.currRune != '}' && s.currToken.Typ != EOF {
 		s.readRune()
-	default:
-		s.readRune()
-		return ""
 	}
 
 	return string(s.src[position:s.position])

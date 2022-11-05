@@ -61,24 +61,19 @@ func TestEncodeToCmdArgs(tt *testing.T) {
 			want: []string{"a", `"b"`},
 		},
 		{
-			src:    `echo ${fileA} ${fileB}`,
-			want:   []string{"echo", "fileA", "fileB"},
-			values: map[string]interface{}{"fileA": `fileA`, "fileB": `fileB`},
+			src:    `echo ${file_1} ${file_2}`,
+			want:   []string{"echo", "file_1", "file_2"},
+			values: map[string]interface{}{"file_1": "file_1", "file_2": `file_2`},
 		},
 		{
-			src:    `echo ${fileA}${fileB}`,
+			src:    `echo ${file_1}${file_2}`,
 			want:   []string{"echo", "file", "Afile", "B"},
-			values: map[string]interface{}{"fileA": `file A`, "fileB": `file B`},
+			values: map[string]interface{}{"file_1": `file A`, "file_2": `file B`},
 		},
 		{
-			src:    `echo ${fileA:%q} ${fileB:%q}`,
-			want:   []string{"echo", "file A", "file B"},
-			values: map[string]interface{}{"fileA": `file A`, "fileB": `file B`},
-		},
-		{
-			src:    `echo ${fileA:%-} ${fileB:%-}`,
+			src:    `echo ${file_1:%-} ${file_2:%-}`,
 			want:   []string{"echo", "file", "A", "file", "B"},
-			values: map[string]interface{}{"fileA": `file A`, "fileB": `file B`},
+			values: map[string]interface{}{"file_1": `file A`, "file_2": `file B`},
 		},
 	}
 

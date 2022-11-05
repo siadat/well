@@ -81,13 +81,17 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 				if interp.Debug {
 					fmt.Printf("args are (%d):\n", len(arg.AsArgs))
 					for i, a := range arg.AsArgs {
-						fmt.Printf("  [%d]: %q\n", i, a)
+						fmt.Printf("  [%d]: %s\n", i, a)
 					}
 				}
 				cmd.Stdout = interp.Stdout
 				cmd.Stderr = interp.Stderr
 				if err := cmd.Run(); err != nil {
 					return nil, fmt.Errorf("external command failed: %v, output:", err)
+				} else {
+					if interp.Debug {
+						fmt.Printf("[---] ran successfully with no errors\n")
+					}
 				}
 				return nil, nil
 			},
@@ -131,13 +135,20 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 				if interp.Debug {
 					fmt.Printf("args are (%d):\n", len(arg.AsArgs))
 					for i, a := range arg.AsArgs {
-						fmt.Printf("  [%d]: %q\n", i, a)
+						fmt.Printf("  [%d]: %s\n", i, a)
 					}
 				}
 				cmd.Stdout = &buf
 				cmd.Stderr = interp.Stderr
 				if err := cmd.Run(); err != nil {
+					// if exitError, ok := err.(*exec.ExitError); ok {
+					// 	return nil, exitError.ExitCode()
+					// }
 					return nil, fmt.Errorf("external command failed: %v, output:\n%s\nEOF", err, buf.String())
+				} else {
+					if interp.Debug {
+						fmt.Printf("[---] ran successfully with no errors\n")
+					}
 				}
 				return &String{AsSingle: buf.String()}, nil
 			},

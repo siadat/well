@@ -14,14 +14,14 @@ type ExecVar struct {
 	Lit string
 }
 
-func (ExecWrd) node() {}
-func (ExecVar) node() {}
-func (ExecWhs) node() {}
-
 type ExecNode interface {
 	node()
 	Value() string
 }
+
+func (ExecWrd) node() {}
+func (ExecVar) node() {}
+func (ExecWhs) node() {}
 
 func (e ExecWrd) Value() string { return e.Lit }
 func (e ExecVar) Value() string { return e.Lit }

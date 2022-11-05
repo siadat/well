@@ -5,12 +5,19 @@ The problem with single quote and double quote is that nesting them becomes unre
 It is not possible to tell if the following is correct with just looking:
 
 ```
-sh -c $'sh -c "echo $\'a string with \\\\\'single-quotes\\\\\' and a string with \\"double-quotes\\"\'"'
+sh -c 'sh -c "echo \'a string with \\\\\'single-quotes\\\\\' and a string with \\"double-quotes\\"\'"'
 ```
 
 But this one is much easier to read:
 ```
 sh -c ‹sh -c «echo ‹${a} and ${b}›»›
+```
+
+You can get that using:
+```
+a="a string with 'single-quotes'" \
+b='a string with "double-quotes"' \
+  guillemets render --input 'sh -c ‹sh -c «echo ‹${a} and ${b}›»›'
 ```
 
 Note that when open and close characters are different, we are able to nest them without having to escape them.
