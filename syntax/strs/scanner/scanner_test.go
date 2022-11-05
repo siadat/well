@@ -61,12 +61,12 @@ func TestScanner(tt *testing.T) {
 			},
 		},
 		{
-			src: `one «${var:%q} «this is \«three\»» four» end`,
+			src: `one «${var_123:%q} «this is \«three\»» four» end`,
 			want: []scanner.CmdToken{
 				{scanner.WORD, `one`},
 				{scanner.SPACE, ` `},
 				{scanner.LDOUBLE_GUILLEMET, `«`},
-				{scanner.ARG, `var:%q`},
+				{scanner.ARG, `var_123:%q`},
 				{scanner.SPACE, ` `},
 				{scanner.LDOUBLE_GUILLEMET, `«`},
 				{scanner.WORD, `this`},

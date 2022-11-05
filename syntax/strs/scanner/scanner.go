@@ -70,9 +70,14 @@ func (s *CmdScanner) readRune() {
 	s.readPosition += 1
 }
 
-func (s *CmdScanner) isIdentifier() bool {
+func (s *CmdScanner) isIdentifierPartFirst() bool {
 	var ch = s.currRune
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
+}
+
+func (s *CmdScanner) isIdentifierMiddle() bool {
+	var ch = s.currRune
+	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' || (ch >= '0' && ch <= '9')
 }
 
 func (s *CmdScanner) isWhitespace() bool {
@@ -116,6 +121,12 @@ func (s *CmdScanner) readVariable() CmdToken {
 	}
 	s.readRune()
 
+	if !s.isIdentifierPartFirst() {
+		return CmdToken{
+			Typ: ILLEGAL_TOKEN,
+			Lit: fmt.Sprintf("expected identifier, got %c", s.currRune),
+		}
+	}
 	var name = s.readIdentifier()
 
 	if curr := s.currRune; curr == '}' {
@@ -174,7 +185,8 @@ func (s *CmdScanner) readVariableFlags() string {
 
 func (s *CmdScanner) readIdentifier() string {
 	var position = s.position
-	for s.isIdentifier() {
+	s.readRune()
+	for s.isIdentifierMiddle() {
 		s.readRune()
 	}
 	return string(s.src[position:s.position])
