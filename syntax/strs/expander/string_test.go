@@ -45,6 +45,15 @@ func TestEncodeToString(tt *testing.T) {
 			values: map[string]interface{}{"key": "a long key"},
 		},
 		{
+			src:    `hello ${key}`,
+			err:    `variable key is <nil>`,
+			values: map[string]interface{}{},
+		},
+		{
+			src:  `hello {key}`,
+			want: `hello {key}`, // allow raw { and }
+		},
+		{
 			src:    `abc ${key:%Q}`,
 			want:   `abc $'a long key'`,
 			values: map[string]interface{}{"key": "a long key"},

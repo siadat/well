@@ -88,7 +88,6 @@ func (s *CmdScanner) isWord() bool {
 	case '\\',
 		'\'', '"',
 		'$',
-		'{', '}',
 		'«', '»',
 		'‹', '›',
 		' ', '\t', '\n', '\r',
@@ -280,10 +279,6 @@ func (s *CmdScanner) nextToken() (CmdToken, error) {
 		return tok, nil
 	case '$':
 		var tok = s.readVariable()
-		return tok, nil
-	case '}':
-		var tok = CmdToken{ILLEGAL_TOKEN, fmt.Sprintf("%c", s.currRune)}
-		s.readRune() // skip
 		return tok, nil
 	case '«':
 		var tok = CmdToken{LDOUBLE_GUILLEMET, fmt.Sprintf("%c", s.currRune)}

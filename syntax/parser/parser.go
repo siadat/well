@@ -477,7 +477,8 @@ func MustParseStr(s string) *strs_parser.Root {
 	var p = strs_parser.NewParser()
 	var root, err = p.Parse(strings.NewReader(s))
 	if err != nil {
-		panic(ParseError{fmt.Errorf("failed to parse str: %w", err)})
+		// if debug { fmt.Printf("failed parsing %q", s) }
+		panic(ParseError{fmt.Errorf("failed to parse str %q: %w", s, err)})
 	}
 	return root
 }

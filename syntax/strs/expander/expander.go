@@ -14,7 +14,7 @@ func MappingFuncFromMap(m map[string]interface{}) func(string) interface{} {
 	return func(name string) interface{} {
 		var v, ok = m[name]
 		if !ok {
-			panic(fmt.Sprintf("missing value for variable %q", name))
+			return nil
 		}
 		return v
 	}
@@ -167,7 +167,7 @@ func convertToExecNode(node parser.CmdNode, escapeOuter bool, mapping func(strin
 	case parser.Var:
 		var val = mapping(item.Name)
 		if val == nil {
-			return nil, fmt.Errorf("variable %q is %v", item.Name, val)
+			return nil, fmt.Errorf("variable %s is %v", item.Name, val)
 		}
 		return formatterNewNew(val, item.Opts, escapeOuter)
 	default:
