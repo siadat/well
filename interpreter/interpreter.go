@@ -1,6 +1,8 @@
 package interpreter
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -70,22 +72,78 @@ func (interp *Interpreter) evalParsed(node ast.Node, env Environment) (obj Objec
 func (interp *Interpreter) builtins() map[string]*Builtin {
 	var builtinsSlice = []*Builtin{
 		{
-			"external", func(posArgs []Object, kvArgs map[string]Object) error {
+			"external", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				var arg = posArgs[0].(*String)
 				if interp.Debug {
 					fmt.Fprintf(os.Stderr, "call external command %#v\n", arg)
 				}
 				var cmd = exec.Command(arg.AsArgs[0], arg.AsArgs[1:]...)
-				cmd.Stdout = interp.Stdout
-				cmd.Stderr = interp.Stdout
-				if err := cmd.Run(); err != nil {
-					return fmt.Errorf("external command failed: %v", err)
+				if interp.Debug {
+					fmt.Printf("args are (%d):\n", len(arg.AsArgs))
+					for i, a := range arg.AsArgs {
+						fmt.Printf("  [%d]: %s\n", i, a)
+					}
 				}
-				return nil
+				cmd.Stdout = interp.Stdout
+				cmd.Stderr = interp.Stderr
+				if err := cmd.Run(); err != nil {
+					return nil, fmt.Errorf("external command failed: %v, output:", err)
+				}
+				return nil, nil
 			},
 		},
 		{
-			"echo", func(posArgs []Object, kvArgs map[string]Object) error {
+			"external_json", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+				var arg = posArgs[0].(*String)
+				if interp.Debug {
+					fmt.Fprintf(os.Stderr, "call external command %#v\n", arg)
+				}
+				var stdout bytes.Buffer
+				var stderr bytes.Buffer
+				var cmd = exec.Command(arg.AsArgs[0], arg.AsArgs[1:]...)
+				cmd.Stdout = &stdout
+				cmd.Stderr = &stderr
+
+				var err = cmd.Run()
+				var retBuf bytes.Buffer
+				var enc = json.NewEncoder(&retBuf)
+				var encodeErr = enc.Encode(map[string]string{
+					"stdout": stdout.String(),
+					"stderr": stderr.String(),
+				})
+				if encodeErr != nil {
+					return nil, fmt.Errorf("encoding json failed: %s", encodeErr)
+				}
+				if err != nil {
+					return nil, fmt.Errorf("external command failed: %v, output:\n%s", err, strings.TrimSpace(retBuf.String()))
+				}
+				return &String{AsSingle: strings.TrimSpace(retBuf.String())}, nil
+			},
+		},
+		{
+			"external_capture", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+				var arg = posArgs[0].(*String)
+				if interp.Debug {
+					fmt.Fprintf(os.Stderr, "call external command %#v\n", arg)
+				}
+				var buf bytes.Buffer
+				var cmd = exec.Command(arg.AsArgs[0], arg.AsArgs[1:]...)
+				if interp.Debug {
+					fmt.Printf("args are (%d):\n", len(arg.AsArgs))
+					for i, a := range arg.AsArgs {
+						fmt.Printf("  [%d]: %s\n", i, a)
+					}
+				}
+				cmd.Stdout = &buf
+				cmd.Stderr = &buf
+				if err := cmd.Run(); err != nil {
+					return nil, fmt.Errorf("external command failed: %v, output:\n%s\nEOF", err, buf.String())
+				}
+				return &String{AsSingle: buf.String()}, nil
+			},
+		},
+		{
+			"echo", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				for i, arg := range posArgs {
 					fmt.Fprint(interp.Stdout, arg.GoValue())
 					if i != len(posArgs)-1 {
@@ -93,13 +151,12 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 					}
 				}
 				fmt.Fprint(interp.Stdout, "\n")
-				return nil
+				return nil, nil
 			},
 		},
 		{
-			"date", func(posArgs []Object, kvArgs map[string]Object) error {
-				fmt.Fprintf(interp.Stdout, "%v\n", time.Now())
-				return nil
+			"date", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+				return &String{AsSingle: fmt.Sprintf("%v", time.Now())}, nil
 			},
 		},
 	}
@@ -157,11 +214,11 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 				positionals = append(positionals, obj)
 			}
 
-			var userErr = funcDef.Func(positionals, keywords)
+			var userResult, userErr = funcDef.Func(positionals, keywords)
 			if userErr != nil {
 				panic(interp.newError(node.Pos(), "%s", userErr))
 			}
-			return nil
+			return userResult
 		case *Function:
 			if call, decl := len(node.Arg.Exprs), len(funcDef.Signature.ArgNames); call != decl {
 				panic(interp.newError(node.Arg.Pos(), "%s takes %d args, call is sending %d arg", funcDef, decl, call))

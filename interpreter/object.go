@@ -51,7 +51,7 @@ type ReturnStmt struct {
 
 type Builtin struct {
 	Name string
-	Func func([]Object, map[string]Object) error
+	Func func([]Object, map[string]Object) (Object, error)
 }
 
 var NoValue = struct{}{}

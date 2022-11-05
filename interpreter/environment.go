@@ -59,6 +59,9 @@ func (env *mapEnv) MustSet(name string, obj Object) {
 }
 
 func (env *mapEnv) set(name string, obj Object) error {
+	if env.debug {
+		fmt.Printf("DEBUG: setting %q to %#v\n", name, obj)
+	}
 	if _, ok := env.store[name]; ok {
 		return fmt.Errorf("duplicate env key %q", name)
 	}

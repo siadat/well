@@ -52,6 +52,7 @@ func main() {
 
 					interp := interpreter.NewInterpreter(os.Stdout, os.Stderr)
 					interp.SetVerbose(cmdCtx.Bool("verbose"))
+					interp.SetDebug(cmdCtx.Bool("debug"))
 					env := interpreter.NewEnvironment()
 					env.SetDebug(cmdCtx.Bool("debug"))
 					var _, evalErr = interp.Eval(bytes.NewReader(byts), env)
