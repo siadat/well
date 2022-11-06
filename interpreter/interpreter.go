@@ -266,6 +266,16 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 		return interp.eval(node.X, env)
 	case *ast.CallExpr:
 		funcDef := interp.eval(node.Fun, env)
+		if interp.Verbose {
+			switch f := node.Fun.(type) {
+			case *ast.Ident:
+				var line, col = interp.parser.GetLineColAt(f.Pos())
+				fmt.Fprintf(os.Stderr, "+ called %v(...) at %d:%d\n", f.Name, line+1, col+1)
+			default:
+				panic(interp.newError(node.Pos(), "unsupported call expressiong of type %T", f))
+			}
+		}
+		// TODO: trace function calls
 		switch funcDef := funcDef.(type) {
 		case *Builtin:
 			var positionals []Object
@@ -364,7 +374,7 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			panic(interp.newError(node.Pos(), "failed to render string: %v", err))
 		}
 		if interp.Verbose {
-			fmt.Fprintf(interp.Stderr, "+%s\n", rendered)
+			// fmt.Fprintf(interp.Stderr, "+ string %q\n", rendered)
 		}
 
 		var words, encodeErr = expander.EncodeToCmdArgs(node.Root, envFunc)

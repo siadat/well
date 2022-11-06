@@ -38,6 +38,10 @@ func NewParser() *Parser {
 	return &Parser{}
 }
 
+func (p *Parser) GetLineColAt(pos scanner.Pos) (int, int) {
+	return p.scanner.GetLineColAt(pos)
+}
+
 func (p *Parser) Mark(msg string, showWhitespaces bool) []string {
 	return p.scanner.MarkAt(p.scanner.CurrToken().Pos, msg, showWhitespaces)
 }

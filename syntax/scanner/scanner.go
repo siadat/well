@@ -404,7 +404,7 @@ func (s *Scanner) readNumber() (Token, error) {
 
 func (s *Scanner) MarkAt(at Pos, msg string, showWhitespaces bool) []string {
 	var lines = strings.Split(string(s.src), "\n")
-	var line, column = s.getLineColAt(at)
+	var line, column = s.GetLineColAt(at)
 
 	var prefix = ""
 	var linestr = lines[line]
@@ -496,7 +496,7 @@ func FormatSrc(src string, showWhitespaces bool) string {
 	return src
 }
 
-func (s *Scanner) getLineColAt(pos Pos) (int, int) {
+func (s *Scanner) GetLineColAt(pos Pos) (int, int) {
 	var line = 0
 	var column = 0
 	for i := 0; i < int(pos) && i < len(s.src); i++ {
@@ -511,5 +511,5 @@ func (s *Scanner) getLineColAt(pos Pos) (int, int) {
 }
 
 func (s *Scanner) getCurrPosition() (int, int) {
-	return s.getLineColAt(Pos(s.position))
+	return s.GetLineColAt(Pos(s.position))
 }
