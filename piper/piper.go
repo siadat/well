@@ -1,4 +1,4 @@
-package main
+package piper
 
 import (
 	"bytes"
@@ -20,18 +20,23 @@ type external struct {
 	pipeline []string
 }
 
-func (ext *external) Read() string {
+func (ext *external) Read(stdout, stderr io.Writer) {
 	var ctx = context.TODO()
 
 	var cmds = make([]*exec.Cmd, len(ext.pipeline))
 	var stdin_closers = make([]io.WriteCloser, len(ext.pipeline))
-	var stdouts = make([]bytes.Buffer, len(ext.pipeline))
-	var stderrs = make([]bytes.Buffer, len(ext.pipeline))
+	var stdouts = make([]io.Writer, len(ext.pipeline))
+	var stderrs = make([]io.Writer, len(ext.pipeline))
+	for i := range ext.pipeline {
+		stdouts[i] = &bytes.Buffer{}
+		stderrs[i] = &bytes.Buffer{}
+	}
+	stdouts[len(stdouts)-1] = stdout
+	stderrs[len(stderrs)-1] = stderr
 
 	var all_words = make([][]string, len(ext.pipeline))
 
 	for i, cmdStr := range ext.pipeline {
-
 		var p = parser.NewParser()
 		var node, err = p.Parse(strings.NewReader(cmdStr))
 		if err != nil {
@@ -50,8 +55,8 @@ func (ext *external) Read() string {
 
 		stdin_closers[i] = os.Stdin
 		cmds[i] = exec.CommandContext(ctx, words[0], words[1:]...)
-		cmds[i].Stdout = &stdouts[i]
-		cmds[i].Stderr = &stderrs[i]
+		cmds[i].Stdout = stdouts[i]
+		cmds[i].Stderr = stderrs[i]
 		if i == 0 {
 			cmds[i].Stdin = os.Stdin
 			// fmt.Printf("[debug] connecting stdin of %v to os.Stdin\n", cmds[i])
@@ -62,7 +67,7 @@ func (ext *external) Read() string {
 				panic(pipe_err2)
 			}
 			stdin_closers[i] = wc
-			cmds[i-1].Stdout = io.MultiWriter(wc, &stdouts[i-1])
+			cmds[i-1].Stdout = io.MultiWriter(wc, stdouts[i-1])
 			// fmt.Printf("[debug] connecting stdout of %v to stdin of %v\n", cmds[i-1], cmds[i])
 		}
 	}
@@ -99,9 +104,6 @@ func (ext *external) Read() string {
 		}(i, cmd)
 	}
 	wg.Wait()
-	var last_stdout = stdouts[len(stdouts)-1]
-	// fmt.Printf("[debug] returning stdout of %v\n", cmds[len(stdouts)-1])
-	return last_stdout.String()
 }
 
 func (ext *external) External(cmd string) *external {
@@ -110,18 +112,8 @@ func (ext *external) External(cmd string) *external {
 	}
 }
 
-func External(cmd string) *external {
+func External(cmds ...string) *external {
 	return &external{
-		pipeline: []string{cmd},
+		pipeline: cmds,
 	}
-}
-
-func main() {
-	var out = External("yes").
-		External("nl").
-		External("shuf").
-		External("tail -f").
-		Read()
-
-	fmt.Print(out)
 }

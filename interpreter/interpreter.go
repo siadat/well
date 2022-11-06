@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/siadat/well/erroring"
+	"github.com/siadat/well/piper"
 	"github.com/siadat/well/syntax/ast"
 	"github.com/siadat/well/syntax/parser"
 	"github.com/siadat/well/syntax/scanner"
@@ -73,26 +73,16 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 	var builtinsSlice = []*Builtin{
 		{
 			"external", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
-				var arg = posArgs[0].(*String)
-				if interp.Debug {
-					fmt.Fprintf(os.Stderr, "call external command %#v\n", arg)
+				var args []string
+				for _, a := range posArgs {
+					var arg = a.(*String)
+					// TODO: this is already parsed, but
+					// piper.External is also parsing it.
+					// Change piper.External to accept an
+					// already parsed str.
+					args = append(args, arg.AsSingle)
 				}
-				var cmd = exec.Command(arg.AsArgs[0], arg.AsArgs[1:]...)
-				if interp.Debug {
-					fmt.Printf("args are (%d):\n", len(arg.AsArgs))
-					for i, a := range arg.AsArgs {
-						fmt.Printf("  [%d]: %s\n", i, a)
-					}
-				}
-				cmd.Stdout = interp.Stdout
-				cmd.Stderr = interp.Stderr
-				if err := cmd.Run(); err != nil {
-					return nil, fmt.Errorf("external command failed: %v, output:", err)
-				} else {
-					if interp.Debug {
-						fmt.Printf("[---] ran successfully with no errors\n")
-					}
-				}
+				piper.External(args...).Read(interp.Stdout, interp.Stderr)
 				return nil, nil
 			},
 		},
@@ -100,7 +90,7 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 			"external_json", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				var arg = posArgs[0].(*String)
 				if interp.Debug {
-					fmt.Fprintf(os.Stderr, "call external command %#v\n", arg)
+					fmt.Fprintf(interp.Stderr, "call external command %#v\n", arg)
 				}
 				var stdout bytes.Buffer
 				var stderr bytes.Buffer
@@ -126,35 +116,22 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 		},
 		{
 			"external_capture", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
-				var arg = posArgs[0].(*String)
-				if interp.Debug {
-					fmt.Fprintf(os.Stderr, "call external command %#v\n", arg)
+				var args []string
+				for _, a := range posArgs {
+					var arg = a.(*String)
+					// TODO: this is already parsed, but
+					// piper.External is also parsing it.
+					// Change piper.External to accept an
+					// already parsed str.
+					args = append(args, arg.AsSingle)
 				}
-				var buf bytes.Buffer
-				var cmd = exec.Command(arg.AsArgs[0], arg.AsArgs[1:]...)
-				if interp.Debug {
-					fmt.Printf("args are (%d):\n", len(arg.AsArgs))
-					for i, a := range arg.AsArgs {
-						fmt.Printf("  [%d]: %s\n", i, a)
-					}
-				}
-				cmd.Stdout = &buf
-				cmd.Stderr = interp.Stderr
-				if err := cmd.Run(); err != nil {
-					// if exitError, ok := err.(*exec.ExitError); ok {
-					// 	return nil, exitError.ExitCode()
-					// }
-					return nil, fmt.Errorf("external command failed: %v, output:\n%s\nEOF", err, buf.String())
-				} else {
-					if interp.Debug {
-						fmt.Printf("[---] ran successfully with no errors\n")
-					}
-				}
-				return &String{AsSingle: buf.String()}, nil
+				var stdout bytes.Buffer
+				piper.External(args...).Read(&stdout, interp.Stderr)
+				return &String{AsSingle: stdout.String()}, nil
 			},
 		},
 		{
-			"echo", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+			"println", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				for i, arg := range posArgs {
 					fmt.Fprint(interp.Stdout, arg.GoValue())
 					if i != len(posArgs)-1 {
@@ -162,6 +139,18 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 					}
 				}
 				fmt.Fprint(interp.Stdout, "\n")
+				return nil, nil
+			},
+		},
+		{
+			"print", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+				for i, arg := range posArgs {
+					fmt.Fprint(interp.Stdout, arg.GoValue())
+					if i != len(posArgs)-1 {
+						fmt.Fprint(interp.Stdout, " ")
+					}
+				}
+				// fmt.Fprint(interp.Stdout, "\n")
 				return nil, nil
 			},
 		},
@@ -175,6 +164,7 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 	for _, b := range builtinsSlice {
 		m[b.Name] = b
 	}
+	m["echo"] = m["print"]
 	return m
 }
 

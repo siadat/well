@@ -25,6 +25,7 @@ type Float struct {
 }
 
 type String struct {
+	// TODO: refactor this, so ugly
 	AsSingle string
 	AsArgs   []string
 }
