@@ -38,6 +38,10 @@ func NewParser() *Parser {
 	return &Parser{}
 }
 
+func (p *Parser) Mark(msg string, showWhitespaces bool) []string {
+	return p.scanner.MarkAt(p.scanner.CurrToken().Pos, msg, showWhitespaces)
+}
+
 func (p *Parser) MarkAt(at scanner.Pos, msg string, showWhitespaces bool) []string {
 	return p.scanner.MarkAt(at, msg, showWhitespaces)
 }
@@ -59,50 +63,34 @@ func (p *Parser) SetDebug(debug bool) {
 	}
 }
 
-func (p *Parser) Parse(src io.Reader) (retRoot *ast.Root, retErr error) {
+func (p *Parser) Parse(src io.Reader) (*ast.Root, error) {
 	if err := p.init(src); err != nil {
 		return nil, err
 	}
 
-	defer func() {
-		var err = recover()
-		switch err := err.(type) {
-		case nil:
-			return
-		case ParseError:
-			// if p.debug { debug.PrintStack() }
-			var lines = p.MarkAt(p.scanner.CurrToken().Pos, err.Error(), false)
-			retErr = fmt.Errorf("%s", strings.Join(lines, "\n"))
-		default:
-			fmt.Printf("unexpected error while parsing: %s\n", err)
-			erroring.PrintTrace()
-		}
-	}()
-	retRoot = &ast.Root{Decls: p.parseDecls()}
-	return
+	var result, err = erroring.CallAndRecover[ParseError](func() *ast.Root {
+		return &ast.Root{Decls: p.parseDecls()}
+	})
+	if err != nil {
+		var lines = p.Mark(err.Error(), false)
+		return nil, fmt.Errorf("parsing failed: %s", strings.Join(lines, "\n"))
+	}
+	return result, nil
 }
 
-func (p *Parser) ParseExpr(src io.Reader) (retExpr ast.Expr, retErr error) {
+func (p *Parser) ParseExpr(src io.Reader) (ast.Expr, error) {
 	if err := p.init(src); err != nil {
 		return nil, err
 	}
 
-	defer func() {
-		var err = recover()
-		switch err := err.(type) {
-		case nil:
-			return
-		case ParseError:
-			// if p.debug { debug.PrintStack() }
-			var lines = p.MarkAt(p.scanner.CurrToken().Pos, err.Error(), false)
-			retErr = fmt.Errorf("%s", strings.Join(lines, "\n"))
-		default:
-			fmt.Printf("unexpected error while parsing: %s\n", err)
-			erroring.PrintTrace()
-		}
-	}()
-	retExpr = p.parseExpr(nil, token.LowestPrecedence)
-	return
+	var result, err = erroring.CallAndRecover[ParseError](func() ast.Expr {
+		return p.parseExpr(nil, token.LowestPrecedence)
+	})
+	if err != nil {
+		var lines = p.Mark(err.Error(), false)
+		return nil, fmt.Errorf("parsing expression failed: %s", strings.Join(lines, "\n"))
+	}
+	return result, nil
 }
 
 func (p *Parser) parseDecls() []ast.Decl {
@@ -346,6 +334,8 @@ func (p *Parser) parseStmt() ast.Stmt {
 	switch t.Lit {
 	case "let":
 		return p.parseLetDecl()
+	case "return":
+		return p.parseReturnStmt()
 	}
 
 	switch t.Typ {
@@ -441,6 +431,18 @@ func MustParseStr(s string, raw bool, debug bool) *strs_parser.Root {
 		panic(ParseError{fmt.Errorf("failed to parse str %q: %w", s, err)})
 	}
 	return root
+}
+
+func (p *Parser) parseReturnStmt() *ast.ReturnStmt {
+	var pos = p.scanner.CurrToken().Pos
+	p.expect(token.IDENTIFIER, "return")
+	p.proceed()
+
+	var expr = p.parseExpr(nil, token.LowestPrecedence)
+	return &ast.ReturnStmt{
+		Expr:     expr,
+		Position: pos,
+	}
 }
 
 func (p *Parser) parseLetDecl() ast.Decl {

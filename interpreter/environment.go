@@ -8,7 +8,7 @@ import (
 
 type Environment interface {
 	Get(string) (Object, error)
-	MustSet(string, Object)
+	Set(string, Object) error
 	NewScope() Environment
 	SetDebug(bool)
 }
@@ -52,13 +52,7 @@ func (env *mapEnv) Get(name string) (Object, error) {
 	return nil, fmt.Errorf("undefined object %q", name)
 }
 
-func (env *mapEnv) MustSet(name string, obj Object) {
-	if err := env.set(name, obj); err != nil {
-		panic(err.Error())
-	}
-}
-
-func (env *mapEnv) set(name string, obj Object) error {
+func (env *mapEnv) Set(name string, obj Object) error {
 	if env.debug {
 		fmt.Printf("DEBUG: setting %q to %#v\n", name, obj)
 	}

@@ -27,31 +27,18 @@ func (tc *typeChecker) SetDebug(v bool) {
 	tc.debug = v
 }
 
-func (tc typeChecker) Check(src io.Reader) (types map[ast.Expr]Type, retErr error) {
+func (tc typeChecker) Check(src io.Reader) (map[ast.Expr]Type, error) {
 	tc.parser = parser.NewParser()
 	tc.parser.SetDebug(tc.debug)
-	var node, err = tc.parser.Parse(src)
-	if err != nil {
-		return nil, err
+	var node, parseErr = tc.parser.Parse(src)
+	if parseErr != nil {
+		return nil, parseErr
 	}
 
-	defer func() {
-		var err = recover()
-		switch err := err.(type) {
-		case nil:
-			return
-		case Error:
-			// if interp.Debug { debug.PrintStack() }
-			retErr = err
-		default:
-			fmt.Printf("unexpected error while type-checking: %s\n", err)
-			erroring.PrintTrace()
-		}
-	}()
-
-	tc.check(node)
-	types = tc.types
-	return
+	return erroring.CallAndRecover[Error](func() map[ast.Expr]Type {
+		tc.check(node)
+		return tc.types
+	})
 }
 
 func (tc typeChecker) check(node ast.Node) {

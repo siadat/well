@@ -471,6 +471,31 @@ func (s *Scanner) PrintCursor(layout string, args ...interface{}) {
 	fmt.Print(b.String())
 }
 
+func FormatSrc(src string, showWhitespaces bool) string {
+	var prefix = ""
+
+	const tabWidth = 4
+	if showWhitespaces {
+		// src = strings.ReplaceAll(src, " ", "₋")
+		src = strings.ReplaceAll(src, "\t", "└"+strings.Repeat("─", tabWidth-2)+"┘") //  "␣"
+	}
+
+	var lines = strings.Split(src, "\n")
+	for i := range lines {
+		lines[i] = fmt.Sprintf("%3d| %s", i+1, lines[i])
+	}
+
+	if showWhitespaces {
+		src = strings.Join(lines, "⏎\n"+prefix)
+		src = prefix + src + "·"
+	} else {
+		src = strings.Join(lines, "\n"+prefix)
+		src = prefix + src
+	}
+
+	return src
+}
+
 func (s *Scanner) getLineColAt(pos Pos) (int, int) {
 	var line = 0
 	var column = 0

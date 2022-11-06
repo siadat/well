@@ -66,10 +66,11 @@ func TestParser(tt *testing.T) {
 		},
 		{
 			src: `
-			function main() {
+			function main() string {
 				let x = 3
 				external("echo «hello ${name}»")
 				let input = read("\\w+")
+				return input
 			}
 			`,
 			want: &ast.Root{
@@ -81,39 +82,39 @@ func TestParser(tt *testing.T) {
 						},
 						Signature: &ast.FuncSignature{
 							Args:     nil,
-							RetTypes: nil,
-							Position: 17,
+							RetTypes: []string{"string"},
+							Position: IgnorePos,
 						},
 						Statements: []ast.Stmt{
 							&ast.LetDecl{
 								Name: &ast.Ident{
 									Name:     "x",
-									Position: 30,
+									Position: IgnorePos,
 								},
 								Rhs: &ast.Integer{
 									Value:    3,
-									Position: 34,
+									Position: IgnorePos,
 								},
-								Position: 26,
+								Position: IgnorePos,
 							},
 							&ast.ExprStmt{
 								X: &ast.CallExpr{
 									Fun: &ast.Ident{
 										Name:     "external",
-										Position: 40,
+										Position: IgnorePos,
 									},
 									Arg: &ast.ParenExpr{
 										Exprs: []ast.Expr{
 											&ast.String{
-												Root:     parser.MustParseStr(`echo «hello ${name}»`, true),
-												Position: 49,
+												Root:     parser.MustParseStr(`echo «hello ${name}»`, false, true),
+												Position: IgnorePos,
 											},
 										},
-										Position: 48,
+										Position: IgnorePos,
 									},
-									Position: 40,
+									Position: IgnorePos,
 								},
-								Position: 40,
+								Position: IgnorePos,
 							},
 							&ast.LetDecl{
 								Name: &ast.Ident{
@@ -128,7 +129,7 @@ func TestParser(tt *testing.T) {
 									Arg: &ast.ParenExpr{
 										Exprs: []ast.Expr{
 											&ast.String{
-												Root:     parser.MustParseStr(`\w+`, true),
+												Root:     parser.MustParseStr(`\w+`, false, true),
 												Position: IgnorePos,
 											},
 										},
@@ -138,8 +139,15 @@ func TestParser(tt *testing.T) {
 								},
 								Position: IgnorePos,
 							},
+							&ast.ReturnStmt{
+								Expr: &ast.Ident{
+									Name:     "input",
+									Position: IgnorePos,
+								},
+								Position: IgnorePos,
+							},
 						},
-						Position: 4,
+						Position: IgnorePos,
 					},
 				},
 			},
@@ -151,7 +159,7 @@ func TestParser(tt *testing.T) {
 		p.SetDebug(true)
 		var src = tc.src
 		var got, err = p.Parse(strings.NewReader(src))
-		src = formatSrc(src, true)
+		src = scanner.FormatSrc(src, true)
 		if err != nil {
 			tt.Fatalf("test case failed\nsrc:\n%s\nerr:\n%s", src, err)
 		}
@@ -163,16 +171,4 @@ func TestParser(tt *testing.T) {
 			tt.Fatalf("mismatching results\nsrc:\n%s\ndiff guide:\n  - want\n  + got\ndiff:\n%s", src, diff)
 		}
 	}
-}
-
-func formatSrc(src string, showWhitespaces bool) string {
-	var prefix = "   | "
-	if showWhitespaces {
-		// src = strings.ReplaceAll(src, " ", "₋")
-		src = strings.ReplaceAll(src, "\t", "␣")
-		src = strings.Join(strings.Split(src, "\n"), "⏎\n"+prefix)
-		src = prefix + src + "·"
-		return src
-	}
-	return src
 }

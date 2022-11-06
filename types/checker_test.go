@@ -36,9 +36,9 @@ var testCases = []struct {
 			&ast.Ident{Name: "y", Position: 59}: types.WellType{"Float"},
 			&ast.Ident{Name: "z", Position: 81}: types.WellType{"Integer"},
 
-			&ast.Integer{Value: 123, Position: 85}:                              types.WellType{"Integer"},
-			&ast.Float{Value: 3.14, Position: 63}:                               types.WellType{"Float"},
-			&ast.String{Root: parser.MustParseStr("hello", true), Position: 38}: types.WellType{"String"},
+			&ast.Integer{Value: 123, Position: 85}:                                     types.WellType{"Integer"},
+			&ast.Float{Value: 3.14, Position: 63}:                                      types.WellType{"Float"},
+			&ast.String{Root: parser.MustParseStr("hello", false, true), Position: 38}: types.WellType{"String"},
 
 			// ast.Ident{Name: "external", Position: 92}: types.WellType{"Function"},
 			// ast.Ident{Name: "x", Position: 101}:       types.WellType{"String"},
@@ -49,7 +49,7 @@ var testCases = []struct {
 func TestParser(tt *testing.T) {
 	for ti, tc := range testCases {
 		var src = tc.src
-		src = formatSrc(src, true)
+		src = scanner.FormatSrc(src, true)
 
 		checker := types.NewChecker()
 		checker.SetDebug(true)
@@ -88,16 +88,4 @@ func mapToSlice(m map[ast.Expr]types.Type) []KeyValue {
 type KeyValue struct {
 	Key   ast.Expr
 	Value types.Type
-}
-
-func formatSrc(src string, showWhitespaces bool) string {
-	var prefix = "   | "
-	if showWhitespaces {
-		// src = strings.ReplaceAll(src, " ", "₋")
-		src = strings.ReplaceAll(src, "\t", "␣")
-		src = strings.Join(strings.Split(src, "\n"), "⏎\n"+prefix)
-		src = prefix + src + "·"
-		return src
-	}
-	return src
 }

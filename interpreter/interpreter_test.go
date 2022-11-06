@@ -9,6 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/kr/pretty"
 	"github.com/siadat/well/interpreter"
+	"github.com/siadat/well/syntax/scanner"
 )
 
 var testCases = []struct {
@@ -29,9 +30,10 @@ var testCases = []struct {
 		src: `
 	    function f1(s1 string, s2 string) {
 			println(s1, "and", s2)
+			println(f2(0, 0))
 		}
 	    function f2(s1 string, s2 string) (string) {
-			// return "ok"
+			return "ok"
 		}
 
 	    function main() {
@@ -50,7 +52,7 @@ var testCases = []struct {
 func TestParser(tt *testing.T) {
 	for ti, tc := range testCases {
 		var src = tc.src
-		src = formatSrc(src, true)
+		src = scanner.FormatSrc(src, true)
 
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
@@ -72,16 +74,4 @@ func TestParser(tt *testing.T) {
 			tt.Fatalf("mismatching results (test case %d) \nsrc:\n%s\ndiff guide:\n  - want\n  + got\ndiff:\n%s", ti, src, diff)
 		}
 	}
-}
-
-func formatSrc(src string, showWhitespaces bool) string {
-	var prefix = "   | "
-	if showWhitespaces {
-		// src = strings.ReplaceAll(src, " ", "₋")
-		src = strings.ReplaceAll(src, "\t", "␣")
-		src = strings.Join(strings.Split(src, "\n"), "⏎\n"+prefix)
-		src = prefix + src + "·"
-		return src
-	}
-	return src
 }

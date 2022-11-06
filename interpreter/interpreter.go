@@ -30,6 +30,8 @@ type Interpreter struct {
 	Debug   bool
 
 	parser *parser.Parser
+
+	currEvalNode ast.Node
 }
 
 func NewInterpreter(stdout, stderr io.Writer) *Interpreter {
@@ -57,22 +59,11 @@ func (interp *Interpreter) Eval(src io.Reader, env Environment) (Object, error) 
 	return interp.evalParsed(node, env)
 }
 
-func (interp *Interpreter) evalParsed(node ast.Node, env Environment) (obj Object, retErr error) {
-	defer func() {
-		var err = recover()
-		switch err := err.(type) {
-		case nil:
-			return
-		case InterpError:
-			// if interp.Debug { debug.PrintStack() }
-			retErr = err
-		default:
-			fmt.Printf("unexpected error while interpreting: %s\n", err)
-			erroring.PrintTrace()
-		}
-	}()
-	interp.eval(node, env)
-	return
+func (interp *Interpreter) evalParsed(node ast.Node, env Environment) (Object, error) {
+	return erroring.CallAndRecover[InterpError](func() Object {
+		interp.eval(node, env)
+		return nil
+	})
 }
 
 func (interp *Interpreter) builtins() map[string]*Builtin {
@@ -245,7 +236,14 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 	return m
 }
 
+func (interp *Interpreter) mustSet(env Environment, name string, obj Object) {
+	if err := env.Set(name, obj); err != nil {
+		panic(interp.newError(interp.currEvalNode.Pos(), "%s", err))
+	}
+}
+
 func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
+	interp.currEvalNode = node
 	if interp.Debug {
 		fmt.Printf("DEBUG eval %T %+v\n", node, node)
 	}
@@ -300,7 +298,7 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			for _, arg := range node.Arg.Exprs {
 				var obj = interp.eval(arg, env)
 				var name = positionalArgNames[positionalIdx]
-				newEnv.MustSet(name, obj) // interp.eval(name, env))
+				interp.mustSet(env, name, obj)
 				positionalIdx += 1
 			}
 
@@ -331,7 +329,7 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 		}
 		return val
 	case *ast.FuncDecl:
-		env.MustSet(node.Name.Name, &Function{
+		interp.mustSet(env, node.Name.Name, &Function{
 			Name:      node.Name.Name,
 			Signature: node.Signature,
 			Body:      node.Statements,
@@ -346,7 +344,7 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 	case *ast.Float:
 		return &Float{Value: node.Value}
 	case *ast.LetDecl:
-		env.MustSet(node.Name.Name, interp.eval(node.Rhs, env))
+		interp.mustSet(env, node.Name.Name, interp.eval(node.Rhs, env))
 		return nil
 	case *ast.String:
 		var envFunc = func(name string) interface{} {
