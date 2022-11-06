@@ -1,11 +1,15 @@
 package interpreter
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +20,8 @@ import (
 	"github.com/siadat/well/syntax/scanner"
 	"github.com/siadat/well/syntax/strs/expander"
 )
+
+var NoPos scanner.Pos = -1
 
 type Interpreter struct {
 	Stdout  io.Writer
@@ -155,6 +161,77 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 			},
 		},
 		{
+			"read", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+				if len(posArgs) != 0 {
+					return nil, fmt.Errorf("read expects 0 args, got %d", len(posArgs))
+				}
+				var scanner = bufio.NewScanner(os.Stdin)
+				scanner.Scan()
+				if err := scanner.Err(); err != nil {
+					return nil, err
+				}
+				return &String{AsSingle: scanner.Text()}, nil
+			},
+		},
+		{
+			"read_regex", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+				if len(posArgs) != 1 {
+					return nil, fmt.Errorf("read expects 1 arg, got %d", len(posArgs))
+				}
+				var arg = posArgs[0].(*String).AsSingle
+				var re = regexp.MustCompile(arg)
+
+				var scanner = bufio.NewScanner(os.Stdin)
+
+				for {
+					scanner.Scan()
+					if err := scanner.Err(); err != nil {
+						return nil, err
+					}
+					if re.MatchString(scanner.Text()) {
+						break
+					}
+					fmt.Fprintf(interp.Stderr, "Entered text did not match %#q, please try again:\n", re)
+				}
+
+				return &String{AsSingle: scanner.Text()}, nil
+			},
+		},
+		{
+			"read_int", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+				if len(posArgs) > 1 {
+					return nil, fmt.Errorf("read expects 0 or 1 arg, got %d", len(posArgs))
+				}
+
+				var defaultValue int
+				var hasDefatulValue bool
+				if len(posArgs) == 1 {
+					hasDefatulValue = true
+					defaultValue = posArgs[0].(*Integer).Value
+				}
+
+				var scanner = bufio.NewScanner(os.Stdin)
+
+				for {
+					scanner.Scan()
+					if err := scanner.Err(); err != nil {
+						return nil, err
+					}
+
+					if scanner.Text() == "" && hasDefatulValue {
+						return &Integer{Value: defaultValue}, nil
+					}
+
+					var d, err = strconv.ParseInt(scanner.Text(), 10, 64)
+					if err != nil {
+						fmt.Fprintf(interp.Stderr, "Invalid int (%s), please try again:\n", err)
+						continue
+					}
+					return &Integer{Value: int(d)}, nil
+				}
+			},
+		},
+		{
 			"date", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				return &String{AsSingle: fmt.Sprintf("%v", time.Now())}, nil
 			},
@@ -164,7 +241,7 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 	for _, b := range builtinsSlice {
 		m[b.Name] = b
 	}
-	m["echo"] = m["print"]
+	m["echo"] = m["print"] // TODO: maybe deprecate echo?
 	return m
 }
 
@@ -178,10 +255,8 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			interp.eval(decl, env)
 		}
 		return interp.eval(&ast.CallExpr{
-			Fun: &ast.Ident{Name: "main", Position: -1},
-			Arg: &ast.ParenExpr{
-				Exprs: nil,
-			},
+			Fun: &ast.Ident{Name: "main", Position: NoPos},
+			Arg: &ast.ParenExpr{Exprs: nil},
 		}, env)
 	case *ast.ParenExpr:
 		var objs []Object
@@ -252,7 +327,7 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			if b, ok := interp.builtins()[node.Name]; ok {
 				return b
 			}
-			panic(interp.newError(node.Pos(), "ident %q not found: %v", node.Name, err))
+			panic(interp.newError(node.Pos(), "%q is missing: %v", node.Name, err))
 		}
 		return val
 	case *ast.FuncDecl:
@@ -277,7 +352,7 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 		var envFunc = func(name string) interface{} {
 			val, err := env.Get(name)
 			if err != nil {
-				panic(interp.newError(node.Pos(), "ident %q not found: %v", name, err))
+				panic(interp.newError(node.Pos(), "%q is missing: %v", name, err))
 			}
 			return val
 		}
@@ -312,6 +387,9 @@ func (i InterpError) Error() string {
 }
 
 func (interp *Interpreter) newError(pos scanner.Pos, f string, args ...any) error {
+	if pos == NoPos {
+		return InterpError{fmt.Errorf(f, args...)}
+	}
 	var lines = interp.parser.MarkAt(pos, fmt.Sprintf(f, args...), false)
 	return InterpError{fmt.Errorf("%s", strings.Join(lines, "\n"))}
 }

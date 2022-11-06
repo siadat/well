@@ -78,7 +78,6 @@ func (p *Parser) Parse(src io.Reader) (retRoot *ast.Root, retErr error) {
 			erroring.PrintTrace()
 		}
 	}()
-
 	retRoot = &ast.Root{Decls: p.parseDecls()}
 	return
 }
@@ -152,8 +151,9 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 			}
 			panic(ParseError{fmt.Errorf("failed to unquote string: %v", err)})
 		}
+		var raw = t.Lit[0] == '`'
 		return &ast.String{
-			Root:     MustParseStr(v, p.debug),
+			Root:     MustParseStr(v, raw, p.debug),
 			Position: t.Pos,
 		}
 	case token.IDENTIFIER:
@@ -209,7 +209,8 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 func (p *Parser) parseParenExpr() *ast.ParenExpr {
 	var pos = p.scanner.CurrToken().Pos
 	var exprs []ast.Expr = parseCsvInParens(p, func(p *Parser) ast.Expr {
-		return p.parseExpr(nil, token.LowestPrecedence)
+		var expr = p.parseExpr(nil, token.LowestPrecedence)
+		return expr
 	})
 
 	return &ast.ParenExpr{
@@ -425,7 +426,12 @@ func (p *Parser) parseFuncSignature() ast.FuncSignature {
 	}
 }
 
-func MustParseStr(s string, debug bool) *strs_parser.Root {
+func MustParseStr(s string, raw bool, debug bool) *strs_parser.Root {
+	if raw {
+		return &strs_parser.Root{
+			Items: []strs_parser.CmdNode{strs_parser.Wrd{Lit: s}},
+		}
+	}
 	var p = strs_parser.NewParser()
 	var root, err = p.Parse(strings.NewReader(s))
 	if err != nil {

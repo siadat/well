@@ -97,7 +97,7 @@ func (ext *external) Read(stdout, stderr io.Writer) {
 						// head exits faster than yes.
 						// fmt.Println("[debug] SIGPIPE received by", cmd)
 					} else {
-						panic(fmt.Sprintf("command %q failed: %v", cmd, err))
+						panic(fmt.Sprintf("following command failed:\n  Error:   %v\n  Command: %q", err, cmd))
 					}
 				}
 			}

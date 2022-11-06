@@ -69,6 +69,7 @@ func TestParser(tt *testing.T) {
 			function main() {
 				let x = 3
 				external("echo «hello ${name}»")
+				let input = read("\\w+")
 			}
 			`,
 			want: &ast.Root{
@@ -113,6 +114,29 @@ func TestParser(tt *testing.T) {
 									Position: 40,
 								},
 								Position: 40,
+							},
+							&ast.LetDecl{
+								Name: &ast.Ident{
+									Name:     "input",
+									Position: IgnorePos,
+								},
+								Rhs: &ast.CallExpr{
+									Fun: &ast.Ident{
+										Name:     "read",
+										Position: IgnorePos,
+									},
+									Arg: &ast.ParenExpr{
+										Exprs: []ast.Expr{
+											&ast.String{
+												Root:     parser.MustParseStr(`\w+`, true),
+												Position: IgnorePos,
+											},
+										},
+										Position: IgnorePos,
+									},
+									Position: IgnorePos,
+								},
+								Position: IgnorePos,
 							},
 						},
 						Position: 4,
