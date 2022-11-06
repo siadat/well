@@ -446,31 +446,46 @@ func (p *Parser) parseStmt() ast.Stmt {
 	}
 }
 
+func (p *Parser) parseFuncSignatureArg() ast.FuncSignatureArg {
+	var name = p.expectType(token.IDENTIFIER)
+	p.proceed()
+
+	var typ = p.expectType(token.IDENTIFIER)
+	p.proceed()
+
+	return ast.FuncSignatureArg{
+		Name: name.Lit,
+		Type: typ.Lit,
+	}
+}
+
 func (p *Parser) parseFuncSignature() ast.FuncSignature {
 	var pos = p.scanner.CurrToken().Pos
 	p.expect(token.LPAREN, "(")
 	p.proceed()
 
-	var argNames []string
-	var argTypes []string
+	var args []ast.FuncSignatureArg
 	var retTypes []string
 	for {
 		var t = p.scanner.CurrToken()
 		if t.Typ == token.RPAREN && t.Lit == ")" {
 			break
 		}
-		p.proceed()
-		// TODO: parse argNames and argTypes
+		if t.Typ == token.EOF {
+			break
+		}
+		args = append(args, p.parseFuncSignatureArg())
+
+		if tk := p.scanner.CurrToken(); tk.Typ == token.COMMA {
+			p.proceed()
+		}
 	}
 
 	p.expect(token.RPAREN, ")")
 	p.proceed()
 
-	// TODO: parse retTypes
-
 	return ast.FuncSignature{
-		ArgNames: argNames,
-		ArgTypes: argTypes,
+		Args:     args,
 		RetTypes: retTypes,
 		Position: pos,
 	}

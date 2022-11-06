@@ -21,7 +21,7 @@ func TestParser(tt *testing.T) {
 	}{
 		{
 			src: `
-			function main() {
+			function main(s string, i int) {
 				let x = 3
 			}
 			`,
@@ -33,8 +33,16 @@ func TestParser(tt *testing.T) {
 							Position: 13,
 						},
 						Signature: &ast.FuncSignature{
-							ArgNames: nil,
-							ArgTypes: nil,
+							Args: []ast.FuncSignatureArg{
+								{
+									Name: "s",
+									Type: "string",
+								},
+								{
+									Name: "i",
+									Type: "int",
+								},
+							},
 							RetTypes: nil,
 							Position: 17,
 						},
@@ -42,13 +50,13 @@ func TestParser(tt *testing.T) {
 							&ast.LetDecl{
 								Name: &ast.Ident{
 									Name:     "x",
-									Position: 30,
+									Position: 45,
 								},
 								Rhs: &ast.Integer{
 									Value:    3,
-									Position: 34,
+									Position: 49,
 								},
-								Position: 26,
+								Position: 41,
 							},
 						},
 						Position: 4,
@@ -71,8 +79,7 @@ func TestParser(tt *testing.T) {
 							Position: 13,
 						},
 						Signature: &ast.FuncSignature{
-							ArgNames: nil,
-							ArgTypes: nil,
+							Args:     nil,
 							RetTypes: nil,
 							Position: 17,
 						},

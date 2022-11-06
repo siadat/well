@@ -10,9 +10,13 @@ type Root struct {
 	Decls []Decl
 }
 
+type FuncSignatureArg struct {
+	Name string
+	Type string
+}
+
 type FuncSignature struct {
-	ArgNames []string
-	ArgTypes []string
+	Args     []FuncSignatureArg
 	RetTypes []string
 
 	Position scanner.Pos

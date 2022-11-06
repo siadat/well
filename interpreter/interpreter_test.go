@@ -25,6 +25,23 @@ var testCases = []struct {
 		wantObj:    nil,
 		wantStdout: "hello\n",
 	},
+	{
+		src: `
+	    function f(s1 string, s2 string) {
+			println(s1, "and", s2)
+		}
+
+	    function main() {
+	        external(
+			  "echo 'hello'",
+			  "nl",
+			)
+			f("hi", "bye")
+	    }
+	    `,
+		wantObj:    nil,
+		wantStdout: "     1\thello\nhi and bye\n",
+	},
 }
 
 func TestParser(tt *testing.T) {

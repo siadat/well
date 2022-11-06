@@ -221,21 +221,22 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			}
 			return userResult
 		case *Function:
-			if call, decl := len(node.Arg.Exprs), len(funcDef.Signature.ArgNames); call != decl {
-				panic(interp.newError(node.Arg.Pos(), "%s takes %d args, call is sending %d arg", funcDef, decl, call))
+			var callLen = len(node.Arg.Exprs)
+			var declLen = len(funcDef.Signature.Args)
+			if callLen != declLen {
+				panic(interp.newError(node.Arg.Pos(), "%s takes %d args, call is sending %d arg", funcDef, declLen, callLen))
 			}
 
 			var positionalArgNames []string
-			for _, param := range funcDef.Signature.ArgNames {
-				positionalArgNames = append(positionalArgNames, param)
+			for _, param := range funcDef.Signature.Args {
+				positionalArgNames = append(positionalArgNames, param.Name)
 			}
 
 			var positionalIdx = 0
-			newEnv := env.NewScope()
+			var newEnv = env.NewScope()
 			for _, arg := range node.Arg.Exprs {
-				obj := interp.eval(arg, env)
-
-				name := positionalArgNames[positionalIdx]
+				var obj = interp.eval(arg, env)
+				var name = positionalArgNames[positionalIdx]
 				newEnv.MustSet(name, obj) // interp.eval(name, env))
 				positionalIdx += 1
 			}
@@ -244,7 +245,7 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			// return interp.eval(funcDef.Body, newEnv)
 
 			for _, stmt := range funcDef.Body {
-				result := interp.eval(stmt, env)
+				result := interp.eval(stmt, newEnv)
 				switch result := result.(type) {
 				case *ReturnStmt:
 					return result.Expr
