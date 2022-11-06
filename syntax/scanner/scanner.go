@@ -161,10 +161,6 @@ func (s *Scanner) nextToken() (Token, error) {
 		var tok = Token{token.MUL, fmt.Sprintf("%c", s.currRune), Pos(start)}
 		s.readRune()
 		return tok, nil
-	case '/':
-		var tok = Token{token.QUO, fmt.Sprintf("%c", s.currRune), Pos(start)}
-		s.readRune()
-		return tok, nil
 	case '.':
 		var tok = Token{token.PERIOD, fmt.Sprintf("%c", s.currRune), Pos(start)}
 		s.readRune()
@@ -241,15 +237,22 @@ func (s *Scanner) nextToken() (Token, error) {
 			s.readRune()
 			return tok, nil
 		}
-	case '#':
-		if s.skipComment {
-			var ret, err = s.readComment()
-			if err != nil {
-				return ret, err
+	case '/':
+		// this can be '/' or '//'
+		if s.nextRune == '/' {
+			if s.skipComment {
+				var ret, err = s.readComment()
+				if err != nil {
+					return ret, err
+				}
+				return s.nextToken()
+			} else {
+				return s.readComment()
 			}
-			return s.nextToken()
 		} else {
-			return s.readComment()
+			var tok = Token{token.QUO, fmt.Sprintf("%c", s.currRune), Pos(start)}
+			s.readRune()
+			return tok, nil
 		}
 	case '"', '`':
 		return s.readString(s.currRune)

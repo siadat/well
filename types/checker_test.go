@@ -26,7 +26,7 @@ var testCases = []struct {
 	        let x = "hello"
 	        let y = 3.14
 	        let z = 123
-			# external(x)
+			// external(x)
 	    }
 	    `,
 		want: map[ast.Expr]types.Type{
