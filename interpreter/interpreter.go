@@ -168,18 +168,6 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 	return m
 }
 
-func (interp *Interpreter) getMainFuncDecl(file *ast.Root) *ast.FuncDecl {
-	for _, decl := range file.Decls {
-		switch decl := decl.(type) {
-		case *ast.FuncDecl:
-			if decl.Name.Name == "main" {
-				return decl
-			}
-		}
-	}
-	panic(interp.newError(-1, "missing main func declaration"))
-}
-
 func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 	if interp.Debug {
 		fmt.Printf("DEBUG eval %T %+v\n", node, node)
