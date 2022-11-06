@@ -28,24 +28,26 @@ var testCases = []struct {
 	},
 	{
 		src: `
-	    function f1(s1 string, s2 string) {
+		function greet(s1 string, s2 string) {
 			println(s1, "and", s2)
 			println(f2(0, 0))
 		}
-	    function f2(s1 string, s2 string) (string) {
-			return "ok"
+		function f2(s1 string, s2 string) (string) {
+			return "s1=${s1} and s2=${s2}"
 		}
 
-	    function main() {
-	        external(
-			  "echo 'hello'",
-			  "nl",
+		function main() {
+			let s1 = "hi"
+			let bye = "bye"
+			external(
+				"echo 'hello'",
+				"nl",
 			)
-			f1("hi", "bye")
-	    }
-	    `,
+			greet(s1, bye)
+		}
+		`,
 		wantObj:    nil,
-		wantStdout: "     1\thello\nhi and bye\n",
+		wantStdout: "     1\thello\nhi and bye\ns1=0 and s2=0\n",
 	},
 }
 

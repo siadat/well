@@ -43,7 +43,7 @@ type Function struct {
 	Name      string
 	Signature *ast.FuncSignature
 	Body      []ast.Stmt
-	Env       Environment
+	// Env       Environment
 }
 
 type ReturnStmt struct {

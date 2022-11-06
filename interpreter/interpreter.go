@@ -245,7 +245,7 @@ func (interp *Interpreter) mustSet(env Environment, name string, obj Object) {
 func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 	interp.currEvalNode = node
 	if interp.Debug {
-		fmt.Printf("DEBUG eval %T %+v\n", node, node)
+		fmt.Printf("[eval] %T %+v\n", node, node)
 	}
 	switch node := node.(type) {
 	case *ast.Root:
@@ -294,11 +294,11 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			}
 
 			var positionalIdx = 0
-			var newEnv = env.NewScope()
+			var newEnv = env.Global().NewScope()
 			for _, arg := range node.Arg.Exprs {
-				var obj = interp.eval(arg, env)
+				var obj = interp.eval(arg, env) // here we should use the old env
 				var name = positionalArgNames[positionalIdx]
-				interp.mustSet(env, name, obj)
+				interp.mustSet(newEnv, name, obj)
 				positionalIdx += 1
 			}
 
@@ -329,12 +329,16 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 		}
 		return val
 	case *ast.FuncDecl:
-		interp.mustSet(env, node.Name.Name, &Function{
-			Name:      node.Name.Name,
-			Signature: node.Signature,
-			Body:      node.Statements,
-			Env:       env,
-		})
+		interp.mustSet(
+			env,
+			node.Name.Name,
+			&Function{
+				Name:      node.Name.Name,
+				Signature: node.Signature,
+				Body:      node.Statements,
+				// Env:       env, // TODO: env.NewScope()?
+			},
+		)
 		// Old note: We return nil, because function declaration in this
 		// language are not expressions atm. If in the futre you want to
 		// support anonymous function, return the Function here.

@@ -10,23 +10,27 @@ type Environment interface {
 	Get(string) (Object, error)
 	Set(string, Object) error
 	NewScope() Environment
+	Global() Environment
 	SetDebug(bool)
 }
 
 type mapEnv struct {
+	global Environment
 	parent Environment
 	store  map[string]Object
 	debug  bool
 }
 
 func NewEnvironment() Environment {
-	env := make(map[string]Object)
-	env["true"] = &Boolean{Value: true}
-	env["false"] = &Boolean{Value: false}
-	return &mapEnv{
+	var store = make(map[string]Object)
+	store["true"] = &Boolean{Value: true}
+	store["false"] = &Boolean{Value: false}
+	var env = &mapEnv{
 		parent: nil,
-		store:  env,
+		store:  store,
 	}
+	env.global = env
+	return env
 }
 
 func (env *mapEnv) SetDebug(v bool) {
@@ -41,7 +45,7 @@ func (env *mapEnv) Get(name string) (Object, error) {
 		}
 
 		var buf bytes.Buffer
-		fmt.Fprintf(&buf, "DEBUG: looking for %q in [", name)
+		fmt.Fprintf(&buf, "[environment] Get %q in [", name)
 		fmt.Fprintf(&buf, strings.Join(keys, " "))
 		fmt.Fprintf(&buf, "]")
 		fmt.Println(buf.String())
@@ -54,7 +58,7 @@ func (env *mapEnv) Get(name string) (Object, error) {
 
 func (env *mapEnv) Set(name string, obj Object) error {
 	if env.debug {
-		fmt.Printf("DEBUG: setting %q to %#v\n", name, obj)
+		fmt.Printf("[environment] Set %q to %#v\n", name, obj)
 	}
 	if _, ok := env.store[name]; ok {
 		return fmt.Errorf("duplicate env key %q", name)
@@ -63,10 +67,19 @@ func (env *mapEnv) Set(name string, obj Object) error {
 	return nil
 }
 
+func (env *mapEnv) Global() Environment {
+	return env.global
+}
+
 func (env *mapEnv) NewScope() Environment {
+	if env.debug {
+		fmt.Printf("[environment] NewScope\n")
+	}
 	newEnv := &mapEnv{
+		global: env.global,
 		parent: env,
 		store:  make(map[string]Object),
+		debug:  env.debug,
 	}
 	for k, v := range env.store {
 		newEnv.store[k] = v
