@@ -55,6 +55,15 @@ func main() {
 					interp.SetDebug(cmdCtx.Bool("debug"))
 					env := interpreter.NewEnvironment()
 					env.SetDebug(cmdCtx.Bool("debug"))
+
+					// TODO: allow passing CLI args as function arguments. Either:
+					//  [->] well run -f ./testdata/test5.well --expression 'my_function("s value", "x value")'
+					//  [  ] well run -f ./testdata/test5.well --function my_function --args '-s "s value" -x "x value"'
+					//  [  ] well run -f ./testdata/test5.well --function my_function -s "s value" -x "x value"
+					//  [  ] well run -f ./testdata/test5.well my_function s='"s value"' x='"x value"'
+					//  [->] well run -f ./testdata/test5.well my_function s="s value" x="x value"
+					//  [->] well run -f ./testdata/test5.well my_function -s "s value" -x "x value"
+
 					var _, evalErr = interp.Eval(bytes.NewReader(byts), env)
 					if evalErr != nil {
 						return evalErr
