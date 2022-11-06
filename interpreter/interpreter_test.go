@@ -27,8 +27,11 @@ var testCases = []struct {
 	},
 	{
 		src: `
-	    function f(s1 string, s2 string) {
+	    function f1(s1 string, s2 string) {
 			println(s1, "and", s2)
+		}
+	    function f2(s1 string, s2 string) (string) {
+			// return "ok"
 		}
 
 	    function main() {
@@ -36,7 +39,7 @@ var testCases = []struct {
 			  "echo 'hello'",
 			  "nl",
 			)
-			f("hi", "bye")
+			f1("hi", "bye")
 	    }
 	    `,
 		wantObj:    nil,

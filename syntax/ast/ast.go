@@ -84,12 +84,6 @@ type AssignExpr struct {
 	Position scanner.Pos
 }
 
-type ExprList struct {
-	Items []Expr
-
-	Position scanner.Pos
-}
-
 type File struct {
 }
 
@@ -140,7 +134,6 @@ type Decl interface {
 func (*Root) node()          {}
 func (*LetDecl) node()       {}
 func (*FuncDecl) node()      {}
-func (*ExprList) node()      {}
 func (*FuncSignature) node() {}
 func (*ExprStmt) node()      {}
 func (*ReturnStmt) node()    {}
@@ -158,7 +151,6 @@ func (*CallExpr) node()      {}
 func (e *Root) Pos() scanner.Pos          { return -1 }
 func (e *LetDecl) Pos() scanner.Pos       { return e.Position }
 func (e *FuncDecl) Pos() scanner.Pos      { return e.Position }
-func (e *ExprList) Pos() scanner.Pos      { return e.Position }
 func (e *FuncSignature) Pos() scanner.Pos { return e.Position }
 func (e *ExprStmt) Pos() scanner.Pos      { return e.Position }
 func (e *ReturnStmt) Pos() scanner.Pos    { return e.Position }

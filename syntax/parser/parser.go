@@ -207,32 +207,10 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 }
 
 func (p *Parser) parseParenExpr() *ast.ParenExpr {
-	p.expect(token.LPAREN, "(")
 	var pos = p.scanner.CurrToken().Pos
-	p.proceed()
-
-	var exprs []ast.Expr
-For:
-	for {
-		var tk = p.scanner.CurrToken()
-		switch tk.Typ {
-		case token.RPAREN:
-			break For
-		case token.NEWLINE:
-			p.skipOptionalNewlines()
-		case token.COMMA:
-			// This allows multiple commas as in `(1, 2,,,)`, I don't care atm,
-			// because there probably will be a formatter that removes them and
-			// converts it to `(1, 2)`
-			p.proceed()
-		default:
-			var expr = p.parseExpr(nil, token.LowestPrecedence)
-			exprs = append(exprs, expr)
-		}
-	}
-
-	p.expect(token.RPAREN, ")")
-	p.proceed()
+	var exprs []ast.Expr = parseCsvInParens(p, func(p *Parser) ast.Expr {
+		return p.parseExpr(nil, token.LowestPrecedence)
+	})
 
 	return &ast.ParenExpr{
 		Exprs:    exprs,
@@ -288,32 +266,6 @@ func (p *Parser) parseExpr(lhs ast.Expr, minPrec token.Precedence) ast.Expr {
 	}
 }
 
-// parseAssignExpr returns an expr that might be an AssignExpr
-func (p *Parser) parseAssignExpr() ast.Expr {
-	var pos = p.scanner.CurrToken().Pos
-	switch firstToken := p.scanner.CurrToken(); firstToken.Typ {
-	case token.IDENTIFIER:
-		var firstIdent = &ast.Ident{
-			Name:     firstToken.Lit,
-			Position: firstToken.Pos,
-		}
-		p.proceed()
-		if t := p.scanner.CurrToken(); t.Typ == token.ASSIGN && t.Lit == "=" {
-			p.proceed()
-			return &ast.AssignExpr{
-				Name:     firstIdent.Name,
-				Expr:     p.parseExpr(nil, token.LowestPrecedence),
-				Position: pos,
-			}
-		} else {
-			return p.parseExpr(firstIdent, token.LowestPrecedence)
-		}
-
-	default:
-		return p.parseExpr(nil, token.LowestPrecedence)
-	}
-}
-
 func (p *Parser) skipOptionalNewlines() {
 	for {
 		var t = p.scanner.CurrToken()
@@ -339,45 +291,6 @@ func (p *Parser) expectType(typ token.Token) scanner.Token {
 		return t
 	}
 	panic(ParseError{fmt.Errorf("expected %s, got %s", typ, t)})
-}
-
-func (p *Parser) parseExprList() ast.ExprList {
-	var list = ast.ExprList{
-		Position: p.scanner.CurrToken().Pos,
-	}
-
-	switch t1 := p.scanner.CurrToken(); t1.Typ {
-	case token.LBRACK:
-		p.proceed()
-		for {
-			p.skipOptionalNewlines()
-			switch tk := p.scanner.CurrToken(); tk.Typ {
-			case token.RBRACK:
-				p.proceed()
-				return list
-			case token.EOF:
-				return list
-			default:
-				var assign = p.parseAssignExpr()
-				list.Items = append(list.Items, assign)
-
-				switch tk := p.scanner.CurrToken(); tk.Typ {
-				case token.COMMA:
-					p.proceed()
-				case token.NEWLINE:
-					p.skipOptionalNewlines()
-				case token.RBRACK:
-					p.proceed()
-				default:
-					panic(ParseError{fmt.Errorf("unexpected token %s", tk)})
-				}
-			}
-		}
-	default:
-		var assign = p.parseAssignExpr()
-		list.Items = append(list.Items, assign)
-		return list
-	}
 }
 
 func (p *Parser) parseFuncDecl() ast.Decl {
@@ -459,30 +372,51 @@ func (p *Parser) parseFuncSignatureArg() ast.FuncSignatureArg {
 	}
 }
 
-func (p *Parser) parseFuncSignature() ast.FuncSignature {
-	var pos = p.scanner.CurrToken().Pos
+func parseCsvInParens[T any](p *Parser, itemParseFunc func(p *Parser) T) []T {
 	p.expect(token.LPAREN, "(")
 	p.proceed()
-
-	var args []ast.FuncSignatureArg
-	var retTypes []string
+	var items []T
+For:
 	for {
-		var t = p.scanner.CurrToken()
-		if t.Typ == token.RPAREN && t.Lit == ")" {
-			break
-		}
-		if t.Typ == token.EOF {
-			break
-		}
-		args = append(args, p.parseFuncSignatureArg())
-
-		if tk := p.scanner.CurrToken(); tk.Typ == token.COMMA {
+		var tk = p.scanner.CurrToken()
+		switch tk.Typ {
+		case token.RPAREN:
+			break For
+		case token.NEWLINE:
+			p.skipOptionalNewlines()
+		case token.COMMA:
+			// This allows multiple commas as in `(1, 2,,,)`, I don't care atm,
+			// because there probably will be a formatter that removes them and
+			// converts it to `(1, 2)`
 			p.proceed()
+		default:
+			items = append(items, itemParseFunc(p))
 		}
 	}
-
 	p.expect(token.RPAREN, ")")
 	p.proceed()
+	return items
+}
+
+func (p *Parser) parseFuncSignature() ast.FuncSignature {
+	var pos = p.scanner.CurrToken().Pos
+	var args []ast.FuncSignatureArg = parseCsvInParens(p, func(p *Parser) ast.FuncSignatureArg {
+		return p.parseFuncSignatureArg()
+	})
+
+	var retTypes []string
+	var t = p.scanner.CurrToken()
+	if t.Typ == token.IDENTIFIER {
+		var typ = p.expectType(token.IDENTIFIER)
+		p.proceed()
+		retTypes = append(retTypes, typ.Lit)
+	} else if t.Typ == token.LPAREN {
+		retTypes = parseCsvInParens(p, func(p *Parser) string {
+			var typ = p.expectType(token.IDENTIFIER)
+			p.proceed()
+			return typ.Lit
+		})
+	}
 
 	return ast.FuncSignature{
 		Args:     args,
