@@ -12,18 +12,15 @@ import (
 
 func main() {
 	var app = &cli.App{
-		Name:  "guillemets",
-		Usage: "Utility cli tool for working with guillemets",
+		Name: "well",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
-				Name:  "debug",
-				Usage: "enable debug mode",
+				Name: "debug",
 			},
 		},
 		Commands: []*cli.Command{
 			{
-				Name:  "run",
-				Usage: "execute a Well file",
+				Name: "run",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "file",
