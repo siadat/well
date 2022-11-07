@@ -156,6 +156,24 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 			},
 		},
 		{
+			"exit", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+				if len(posArgs) != 2 {
+					return nil, fmt.Errorf("read expects 2 args, got %d", len(posArgs))
+				}
+				var code = posArgs[0].(*Integer).Value
+				var msg = posArgs[1].(*String).AsSingle
+				fmt.Fprintf(interp.Stderr, "%s\n", msg)
+				os.Exit(code)
+				return nil, nil
+				// var scanner = bufio.NewScanner(os.Stdin)
+				// scanner.Scan()
+				// if err := scanner.Err(); err != nil {
+				// 	return nil, err
+				// }
+				// return &String{AsSingle: scanner.Text()}, nil
+			},
+		},
+		{
 			"read", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				if len(posArgs) != 0 {
 					return nil, fmt.Errorf("read expects 0 args, got %d", len(posArgs))
