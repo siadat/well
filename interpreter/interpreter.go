@@ -392,6 +392,8 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			return &Boolean{Value: re.MatchString(x.(*String).AsSingle)}
 		case token.NREG:
 			return &Boolean{Value: re.MatchString(x.(*String).AsSingle)}
+		case token.EQL:
+			return &Boolean{Value: x.GoValue() == y.GoValue()}
 		default:
 			panic(interp.newError(node.Pos(), "unsupported binary operator %q", node.Op))
 		}

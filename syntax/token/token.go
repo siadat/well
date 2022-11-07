@@ -103,6 +103,8 @@ var Precedences = map[Token]Precedence{
 
 	REG:  1, // ~~
 	NREG: 1, // !~
+	EQL:  1, // ==
+	NEQ:  1, // !=
 
 	MUL: 2,
 	QUO: 2,
