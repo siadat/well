@@ -47,6 +47,7 @@ func main() {
 					checker.SetDebug(cmdCtx.Bool("debug"))
 					var _, checkErr = checker.Check(bytes.NewReader(byts))
 					if checkErr != nil {
+						fmt.Fprintf(os.Stderr, "type checker failed\n")
 						return checkErr
 					}
 

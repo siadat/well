@@ -19,6 +19,7 @@ import (
 	"github.com/siadat/well/syntax/parser"
 	"github.com/siadat/well/syntax/scanner"
 	"github.com/siadat/well/syntax/strs/expander"
+	"github.com/siadat/well/syntax/token"
 )
 
 var NoPos scanner.Pos = -1
@@ -130,6 +131,9 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 		{
 			"println", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				for i, arg := range posArgs {
+					if arg == nil {
+						return nil, fmt.Errorf("argument %d value is %v", i+1, arg)
+					}
 					fmt.Fprint(interp.Stdout, arg.GoValue())
 					if i != len(posArgs)-1 {
 						fmt.Fprint(interp.Stdout, " ")
@@ -315,14 +319,15 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			// ast.BlockStmt
 			// return interp.eval(funcDef.Body, newEnv)
 
-			for _, stmt := range funcDef.Body {
-				result := interp.eval(stmt, newEnv)
-				switch result := result.(type) {
-				case *ReturnStmt:
-					return result.Expr
-				}
+			var result = interp.eval(funcDef.Body, newEnv)
+			switch result := result.(type) {
+			case nil:
+				return nil
+			case *ReturnStmt:
+				return result.Expr
+			default:
+				panic(interp.newError(node.Pos(), "unexpected return type %T", result))
 			}
-			return nil
 		default:
 			panic(interp.newError(node.Pos(), "unsupported function type %T", funcDef))
 		}
@@ -345,7 +350,7 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			&Function{
 				Name:      node.Name.Name,
 				Signature: node.Signature,
-				Body:      node.Statements,
+				Body:      node.Body,
 				// Env:       env, // TODO: env.NewScope()?
 			},
 		)
@@ -357,6 +362,40 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 		return &Integer{Value: node.Value}
 	case *ast.Float:
 		return &Float{Value: node.Value}
+	case *ast.BinaryExpr:
+		var x = interp.eval(node.X, env)
+		var y = interp.eval(node.Y, env)
+
+		// TODO: check regexp compilation statically on a best effort basis
+		var re = regexp.MustCompile(y.(*String).AsSingle)
+
+		switch node.Op {
+		case token.REG:
+			return &Boolean{Value: re.MatchString(x.(*String).AsSingle)}
+		case token.NREG:
+			return &Boolean{Value: re.MatchString(x.(*String).AsSingle)}
+		default:
+			panic(interp.newError(node.Pos(), "unsupported binary operator %q", node.Op))
+		}
+	case *ast.BlockStmt:
+		for _, stmt := range node.Statements {
+			var result = interp.eval(stmt, env)
+			switch result := result.(type) {
+			case *ReturnStmt:
+				// TODO: statically check unreachable code
+				return result // result.Expr
+				// return result.Expr
+			}
+		}
+		return nil
+	case *ast.IfStmt:
+		var cond = interp.eval(node.Cond, env)
+		if cond.(*Boolean).Value == true {
+			return interp.eval(node.Body, env)
+		} else if node.Else != nil {
+			return interp.eval(node.Else, env)
+		}
+		return nil
 	case *ast.LetDecl:
 		interp.mustSet(env, node.Name.Name, interp.eval(node.Rhs, env))
 		return nil

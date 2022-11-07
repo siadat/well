@@ -42,7 +42,7 @@ type ExtDecl struct {
 type Function struct {
 	Name      string
 	Signature *ast.FuncSignature
-	Body      []ast.Stmt
+	Body      *ast.BlockStmt
 	// Env       Environment
 }
 

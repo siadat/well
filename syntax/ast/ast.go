@@ -30,9 +30,9 @@ type LetDecl struct {
 }
 
 type FuncDecl struct {
-	Name       *Ident
-	Signature  *FuncSignature
-	Statements []Stmt
+	Name      *Ident
+	Signature *FuncSignature
+	Body      *BlockStmt
 
 	Position scanner.Pos
 }
@@ -47,6 +47,19 @@ type ReturnStmt struct {
 	Expr Expr
 
 	Position scanner.Pos
+}
+
+type IfStmt struct {
+	Cond Expr
+	Body *BlockStmt
+	Else Stmt
+
+	Position scanner.Pos
+}
+
+type BlockStmt struct {
+	Statements []Stmt
+	Position   scanner.Pos
 }
 
 type BinaryExpr struct {
@@ -137,6 +150,8 @@ func (*FuncDecl) node()      {}
 func (*FuncSignature) node() {}
 func (*ExprStmt) node()      {}
 func (*ReturnStmt) node()    {}
+func (*IfStmt) node()        {}
+func (*BlockStmt) node()     {}
 func (*Ident) node()         {}
 func (*Integer) node()       {}
 func (*String) node()        {}
@@ -154,6 +169,8 @@ func (e *FuncDecl) Pos() scanner.Pos      { return e.Position }
 func (e *FuncSignature) Pos() scanner.Pos { return e.Position }
 func (e *ExprStmt) Pos() scanner.Pos      { return e.Position }
 func (e *ReturnStmt) Pos() scanner.Pos    { return e.Position }
+func (e *IfStmt) Pos() scanner.Pos        { return e.Position }
+func (e *BlockStmt) Pos() scanner.Pos     { return e.Position }
 func (e *Ident) Pos() scanner.Pos         { return e.Position }
 func (e *Integer) Pos() scanner.Pos       { return e.Position }
 func (e *String) Pos() scanner.Pos        { return e.Position }
@@ -182,3 +199,5 @@ func (*FuncDecl) decl() {}
 func (*LetDecl) stmt()    {}
 func (*ExprStmt) stmt()   {}
 func (*ReturnStmt) stmt() {}
+func (*IfStmt) stmt()     {}
+func (*BlockStmt) stmt()  {}

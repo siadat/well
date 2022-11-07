@@ -31,6 +31,10 @@ var testCases = []struct {
 		function greet(s1 string, s2 string) {
 			println(s1, "and", s2)
 			println(f2(0, 0))
+			if "hello" ~~ "ll" {
+			  return true
+			}
+			external("ping -c1 4.2.2.4")
 		}
 		function f2(s1 string, s2 string) (string) {
 			return "s1=${s1} and s2=${s2}"
@@ -43,11 +47,12 @@ var testCases = []struct {
 				"echo 'hello'",
 				"nl",
 			)
-			greet(s1, bye)
+			let res = greet(s1, bye)
+			println(res)
 		}
 		`,
 		wantObj:    nil,
-		wantStdout: "     1\thello\nhi and bye\ns1=0 and s2=0\n",
+		wantStdout: "     1\thello\nhi and bye\ns1=0 and s2=0\ntrue\n",
 	},
 }
 

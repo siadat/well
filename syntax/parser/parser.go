@@ -77,7 +77,7 @@ func (p *Parser) Parse(src io.Reader) (*ast.Root, error) {
 	})
 	if err != nil {
 		var lines = p.Mark(err.Error(), false)
-		return nil, fmt.Errorf("parsing failed: %s", strings.Join(lines, "\n"))
+		return nil, fmt.Errorf("parsing failed:\n%s", strings.Join(lines, "\n"))
 	}
 	return result, nil
 }
@@ -286,17 +286,8 @@ func (p *Parser) expectType(typ token.Token) scanner.Token {
 	panic(ParseError{fmt.Errorf("expected %s, got %s", typ, t)})
 }
 
-func (p *Parser) parseFuncDecl() ast.Decl {
+func (p *Parser) parseBlock() *ast.BlockStmt {
 	var pos = p.scanner.CurrToken().Pos
-	p.expect(token.IDENTIFIER, "function")
-	p.proceed()
-
-	var identPos = p.scanner.CurrToken().Pos
-	var name = p.expectType(token.IDENTIFIER)
-	p.proceed()
-
-	var signature = p.parseFuncSignature()
-
 	p.expect(token.LBRACE, "{")
 	p.proceed()
 
@@ -323,12 +314,30 @@ func (p *Parser) parseFuncDecl() ast.Decl {
 
 	p.expect(token.RBRACE, "}")
 	p.proceed()
-
-	return &ast.FuncDecl{
-		Name:       &ast.Ident{Name: name.Lit, Position: identPos},
-		Signature:  &signature,
+	return &ast.BlockStmt{
 		Statements: stmts,
 		Position:   pos,
+	}
+}
+
+func (p *Parser) parseFuncDecl() ast.Decl {
+	var pos = p.scanner.CurrToken().Pos
+	p.expect(token.IDENTIFIER, "function")
+	p.proceed()
+
+	var identPos = p.scanner.CurrToken().Pos
+	var name = p.expectType(token.IDENTIFIER)
+	p.proceed()
+
+	var signature = p.parseFuncSignature()
+
+	var stmts = p.parseBlock()
+
+	return &ast.FuncDecl{
+		Name:      &ast.Ident{Name: name.Lit, Position: identPos},
+		Signature: &signature,
+		Body:      stmts,
+		Position:  pos,
 	}
 }
 
@@ -340,6 +349,8 @@ func (p *Parser) parseStmt() ast.Stmt {
 		return p.parseLetDecl()
 	case "return":
 		return p.parseReturnStmt()
+	case "if":
+		return p.parseIfStmt()
 	}
 
 	switch t.Typ {
@@ -435,6 +446,37 @@ func MustParseStr(s string, raw bool, debug bool) *strs_parser.Root {
 		panic(ParseError{fmt.Errorf("failed to parse str %q: %w", s, err)})
 	}
 	return root
+}
+
+func (p *Parser) parseIfStmt() *ast.IfStmt {
+	var pos = p.scanner.CurrToken().Pos
+	p.expect(token.IDENTIFIER, "if")
+	p.proceed()
+
+	var cond = p.parseExpr(nil, token.LowestPrecedence)
+
+	var body = p.parseBlock()
+	var elseStmt ast.Stmt
+
+	var t = p.scanner.CurrToken()
+	if t.Lit == "else" {
+		p.expect(token.IDENTIFIER, "else")
+		p.proceed()
+
+		var t = p.scanner.CurrToken()
+		if t.Lit == "if" {
+			elseStmt = p.parseIfStmt()
+		} else {
+			elseStmt = p.parseBlock()
+		}
+	}
+
+	return &ast.IfStmt{
+		Cond:     cond,
+		Body:     body,
+		Else:     elseStmt,
+		Position: pos,
+	}
 }
 
 func (p *Parser) parseReturnStmt() *ast.ReturnStmt {

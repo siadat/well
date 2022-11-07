@@ -1,15 +1,14 @@
 package parser_test
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/kr/pretty"
 	"github.com/siadat/well/syntax/ast"
 	"github.com/siadat/well/syntax/parser"
 	"github.com/siadat/well/syntax/scanner"
+	"github.com/siadat/well/syntax/token"
 )
 
 const IgnorePos = -1
@@ -46,18 +45,21 @@ func TestParser(tt *testing.T) {
 							RetTypes: nil,
 							Position: 17,
 						},
-						Statements: []ast.Stmt{
-							&ast.LetDecl{
-								Name: &ast.Ident{
-									Name:     "x",
-									Position: 45,
+						Body: &ast.BlockStmt{
+							Statements: []ast.Stmt{
+								&ast.LetDecl{
+									Name: &ast.Ident{
+										Name:     "x",
+										Position: 45,
+									},
+									Rhs: &ast.Integer{
+										Value:    3,
+										Position: 49,
+									},
+									Position: 41,
 								},
-								Rhs: &ast.Integer{
-									Value:    3,
-									Position: 49,
-								},
-								Position: 41,
 							},
+							Position: 35,
 						},
 						Position: 4,
 					},
@@ -70,6 +72,13 @@ func TestParser(tt *testing.T) {
 				let x = 3
 				external("echo «hello ${name}»")
 				let input = read("\\w+")
+				if x ~~ ".+" {
+				  // ...
+				} else if x !~ "hi" {
+				  // ...
+				} else {
+				  // ...
+				}
 				return input
 			}
 			`,
@@ -85,67 +94,106 @@ func TestParser(tt *testing.T) {
 							RetTypes: []string{"string"},
 							Position: IgnorePos,
 						},
-						Statements: []ast.Stmt{
-							&ast.LetDecl{
-								Name: &ast.Ident{
-									Name:     "x",
-									Position: IgnorePos,
-								},
-								Rhs: &ast.Integer{
-									Value:    3,
-									Position: IgnorePos,
-								},
-								Position: IgnorePos,
-							},
-							&ast.ExprStmt{
-								X: &ast.CallExpr{
-									Fun: &ast.Ident{
-										Name:     "external",
+						Body: &ast.BlockStmt{
+							Statements: []ast.Stmt{
+								&ast.LetDecl{
+									Name: &ast.Ident{
+										Name:     "x",
 										Position: IgnorePos,
 									},
-									Arg: &ast.ParenExpr{
-										Exprs: []ast.Expr{
-											&ast.String{
-												Root:     parser.MustParseStr(`echo «hello ${name}»`, false, true),
-												Position: IgnorePos,
+									Rhs: &ast.Integer{
+										Value:    3,
+										Position: IgnorePos,
+									},
+									Position: IgnorePos,
+								},
+								&ast.ExprStmt{
+									X: &ast.CallExpr{
+										Fun: &ast.Ident{
+											Name:     "external",
+											Position: IgnorePos,
+										},
+										Arg: &ast.ParenExpr{
+											Exprs: []ast.Expr{
+												&ast.String{
+													Root:     parser.MustParseStr(`echo «hello ${name}»`, false, true),
+													Position: IgnorePos,
+												},
 											},
+											Position: IgnorePos,
 										},
 										Position: IgnorePos,
 									},
 									Position: IgnorePos,
 								},
-								Position: IgnorePos,
-							},
-							&ast.LetDecl{
-								Name: &ast.Ident{
-									Name:     "input",
-									Position: IgnorePos,
-								},
-								Rhs: &ast.CallExpr{
-									Fun: &ast.Ident{
-										Name:     "read",
+								&ast.LetDecl{
+									Name: &ast.Ident{
+										Name:     "input",
 										Position: IgnorePos,
 									},
-									Arg: &ast.ParenExpr{
-										Exprs: []ast.Expr{
-											&ast.String{
-												Root:     parser.MustParseStr(`\w+`, false, true),
-												Position: IgnorePos,
+									Rhs: &ast.CallExpr{
+										Fun: &ast.Ident{
+											Name:     "read",
+											Position: IgnorePos,
+										},
+										Arg: &ast.ParenExpr{
+											Exprs: []ast.Expr{
+												&ast.String{
+													Root:     parser.MustParseStr(`\w+`, false, true),
+													Position: IgnorePos,
+												},
 											},
+											Position: IgnorePos,
 										},
 										Position: IgnorePos,
 									},
 									Position: IgnorePos,
 								},
-								Position: IgnorePos,
-							},
-							&ast.ReturnStmt{
-								Expr: &ast.Ident{
-									Name:     "input",
+								&ast.IfStmt{
+									Cond: &ast.BinaryExpr{
+										X: &ast.Ident{Name: "x", Position: IgnorePos},
+										Y: &ast.String{
+											Root:     parser.MustParseStr(`.+`, false, true),
+											Position: IgnorePos,
+										},
+										Op:       token.REG,
+										Position: IgnorePos,
+									},
+									Body: &ast.BlockStmt{
+										Statements: nil,
+										Position:   IgnorePos,
+									},
+									Else: &ast.IfStmt{
+										Cond: &ast.BinaryExpr{
+											X: &ast.Ident{Name: "x", Position: IgnorePos},
+											Y: &ast.String{
+												Root:     parser.MustParseStr(`hi`, false, true),
+												Position: IgnorePos,
+											},
+											Op:       token.NREG,
+											Position: IgnorePos,
+										},
+										Body: &ast.BlockStmt{
+											Statements: nil,
+											Position:   IgnorePos,
+										},
+										Else: &ast.BlockStmt{
+											Statements: nil,
+											Position:   IgnorePos,
+										},
+										Position: IgnorePos,
+									},
 									Position: IgnorePos,
 								},
-								Position: IgnorePos,
+								&ast.ReturnStmt{
+									Expr: &ast.Ident{
+										Name:     "input",
+										Position: IgnorePos,
+									},
+									Position: IgnorePos,
+								},
 							},
+							Position: IgnorePos,
 						},
 						Position: IgnorePos,
 					},
@@ -167,7 +215,7 @@ func TestParser(tt *testing.T) {
 		var cmpOpt = cmp.FilterValues(func(p1, p2 scanner.Pos) bool { return p1 == IgnorePos || p2 == IgnorePos || p1 == p2 }, cmp.Ignore())
 
 		if diff := cmp.Diff(tc.want, got, cmpOpt); diff != "" {
-			fmt.Printf("got: %# v\n", pretty.Formatter(got))
+			// fmt.Printf("got: %# v\n", pretty.Formatter(got))
 			tt.Fatalf("mismatching results\nsrc:\n%s\ndiff guide:\n  - want\n  + got\ndiff:\n%s", src, diff)
 		}
 	}

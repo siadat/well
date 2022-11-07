@@ -61,12 +61,14 @@ func (tc typeChecker) check(node ast.Node) {
 		tc.check(node.Expr)
 	case *ast.Ident:
 		// NoOp
+	case *ast.IfStmt:
+		// NoOp
 	case *ast.FuncSignature:
 		// TODO
 	case *ast.FuncDecl:
 		tc.types[node.Name] = WellType{"Function"}
 		tc.check(node.Signature)
-		for _, stmt := range node.Statements {
+		for _, stmt := range node.Body.Statements {
 			tc.check(stmt)
 		}
 	case *ast.Integer:

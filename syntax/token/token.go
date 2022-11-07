@@ -44,10 +44,12 @@ const (
 	QUO    // /
 	REM    // %
 	EQL    // ==
+	REG    // ~~
 	LSS    // <
 	GTR    // >
 	ASSIGN // =
 	NEQ    // !=
+	NREG   // !~
 	LEQ    // <=
 	GEQ    // >=
 	operator_end
@@ -98,6 +100,10 @@ var LowestPrecedence Precedence = 0
 var Precedences = map[Token]Precedence{
 	ADD: 1,
 	SUB: 1,
+
+	REG:  1, // ~~
+	NREG: 1, // !~
+
 	MUL: 2,
 	QUO: 2,
 

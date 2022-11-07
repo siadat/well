@@ -201,6 +201,20 @@ func (s *Scanner) nextToken() (Token, error) {
 			s.readRune()
 			return tok, nil
 		}
+	case '~':
+		// this can only be '~~'
+		if s.nextRune == '~' {
+			var tok = Token{token.REG, fmt.Sprintf("%c%c", s.currRune, s.nextRune), Pos(start)}
+			s.readRune()
+			s.readRune()
+			return tok, nil
+		} else {
+			return Token{
+				token.ILLEGAL,
+				fmt.Sprintf("%c", s.currRune),
+				Pos(s.position),
+			}, fmt.Errorf("invalid character %q", s.currRune)
+		}
 	case '>':
 		// this can be '>' or '>='
 		if s.nextRune == '=' {
@@ -226,9 +240,14 @@ func (s *Scanner) nextToken() (Token, error) {
 			return tok, nil
 		}
 	case '!':
-		// this can be '!' or '!='
+		// this can be '!' or '!=' or '!~'
 		if s.nextRune == '=' {
 			var tok = Token{token.NEQ, fmt.Sprintf("%c%c", s.currRune, s.nextRune), Pos(start)}
+			s.readRune()
+			s.readRune()
+			return tok, nil
+		} else if s.nextRune == '~' {
+			var tok = Token{token.NREG, fmt.Sprintf("%c%c", s.currRune, s.nextRune), Pos(start)}
 			s.readRune()
 			s.readRune()
 			return tok, nil
