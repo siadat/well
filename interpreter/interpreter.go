@@ -80,8 +80,8 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 					// already parsed str.
 					args = append(args, arg.AsSingle)
 				}
-				piper.External(args...).Read(interp.Stdout, interp.Stderr)
-				return nil, nil
+				var err = piper.External(args...).Read(interp.Stdout, interp.Stderr)
+				return nil, err
 			},
 		},
 		{
@@ -124,8 +124,8 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 					args = append(args, arg.AsSingle)
 				}
 				var stdout bytes.Buffer
-				piper.External(args...).Read(&stdout, interp.Stderr)
-				return &String{AsSingle: stdout.String()}, nil
+				var err = piper.External(args...).Read(&stdout, interp.Stderr)
+				return &String{AsSingle: stdout.String()}, err
 			},
 		},
 		{

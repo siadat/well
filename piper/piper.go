@@ -20,7 +20,7 @@ type external struct {
 	pipeline []string
 }
 
-func (ext *external) Read(stdout, stderr io.Writer) {
+func (ext *external) Read(stdout, stderr io.Writer) (retErr error) {
 	var ctx = context.TODO()
 
 	var cmds = make([]*exec.Cmd, len(ext.pipeline))
@@ -74,6 +74,9 @@ func (ext *external) Read(stdout, stderr io.Writer) {
 
 	var wg sync.WaitGroup
 	for i, cmd := range cmds {
+		if retErr != nil {
+			return
+		}
 		wg.Add(1)
 		go func(i int, cmd *exec.Cmd) {
 			defer func() {
@@ -97,13 +100,15 @@ func (ext *external) Read(stdout, stderr io.Writer) {
 						// head exits faster than yes.
 						// fmt.Println("[debug] SIGPIPE received by", cmd)
 					} else {
-						panic(fmt.Sprintf("following command failed:\n  Error:   %v\n  Command: %q", err, cmd))
+						retErr = err
+						return
 					}
 				}
 			}
 		}(i, cmd)
 	}
 	wg.Wait()
+	return
 }
 
 func (ext *external) External(cmd string) *external {
