@@ -107,6 +107,11 @@ func (ft *formater) format(node ast.Node) string {
 		} else {
 			return fmt.Sprintf("(%s) %s", arguments, returns)
 		}
+	case *ast.ReturnStmt:
+		if node.Expr == nil {
+			return ft.indent() + "return\n"
+		}
+		return ft.indent() + fmt.Sprintf("return %s\n", ft.format(node.Expr))
 	case *ast.ParenExpr:
 		var perline = false
 		if perline {

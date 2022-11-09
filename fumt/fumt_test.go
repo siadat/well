@@ -19,7 +19,7 @@ var testCases = []struct {
 	want string
 }{
 	{
-		src: `
+		src: `// external(x)
 
 		function main() {
 	        let x = "hello"
@@ -35,6 +35,7 @@ var testCases = []struct {
 
 		  function f2( x   int   ) {
 	          let y = 3.14
+			    return
 	    }
 	    `,
 		want: `function main() {
@@ -46,19 +47,20 @@ var testCases = []struct {
 
 function f2(x int) {
 	let y = 3.14
+	return
 }
 
 `,
 	},
 }
 
-func iTestFumt(tt *testing.T) {
+func TestFumt(tt *testing.T) {
 	// TODO: preserve comments
 	for ti, tc := range testCases {
 		var src = tc.src
 		src = scanner.FormatSrc(src, true)
 
-		formater := fumt.NewFormater()
+		var formater = fumt.NewFormater()
 		formater.SetDebug(true)
 
 		var buf bytes.Buffer

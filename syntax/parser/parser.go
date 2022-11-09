@@ -74,8 +74,9 @@ func (p *Parser) init(src io.Reader) error {
 	p.scanner.SetIncludeComments(p.includeComments)
 	p.scanner.SetDebug(p.debug)
 
-	var _, err = p.scanner.NextToken()
-	return err
+	p.proceed()
+	// var _, err = p.scanner.NextToken()
+	return nil
 }
 
 func (p *Parser) SetIncludeComments(v bool) {
@@ -508,6 +509,14 @@ func (p *Parser) parseReturnStmt() *ast.ReturnStmt {
 	var pos = p.scanner.CurrToken().Pos
 	p.expect(token.IDENTIFIER, "return")
 	p.proceed()
+
+	switch p.scanner.CurrToken().Typ {
+	case token.NEWLINE:
+		return &ast.ReturnStmt{
+			Expr:     nil,
+			Position: pos,
+		}
+	}
 
 	var expr = p.parseExpr(nil, token.LowestPrecedence)
 	return &ast.ReturnStmt{

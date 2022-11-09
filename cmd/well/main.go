@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/siadat/well/fumt"
 	"github.com/siadat/well/interpreter"
 	"github.com/siadat/well/types"
 	"github.com/urfave/cli/v2"
@@ -68,6 +69,32 @@ func main() {
 					}
 
 					return nil
+				},
+			},
+			{
+				Name: "fmt",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "file",
+						Aliases:  []string{"f"},
+						Usage:    "path to Well file to be executed",
+						Required: true,
+					},
+					&cli.BoolFlag{
+						Name:    "verbose",
+						Aliases: []string{"v"},
+						Usage:   "enable verbose mode",
+					},
+				},
+				Action: func(cmdCtx *cli.Context) error {
+					var byts, readErr = os.ReadFile(cmdCtx.String("file"))
+					if readErr != nil {
+						return readErr
+					}
+
+					var formater = fumt.NewFormater()
+					formater.SetDebug(cmdCtx.Bool("debug"))
+					return formater.Format(bytes.NewReader(byts), os.Stdout)
 				},
 			},
 		},

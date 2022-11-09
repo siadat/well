@@ -22,6 +22,7 @@ func TestParser(tt *testing.T) {
 			src: `
 			function main(s string, i int) {
 				let x = 3
+				return
 			}
 			`,
 			want: &ast.Root{
@@ -57,6 +58,10 @@ func TestParser(tt *testing.T) {
 										Position: 49,
 									},
 									Position: 41,
+								},
+								&ast.ReturnStmt{
+									Expr:     nil,
+									Position: 55,
 								},
 							},
 							Position: 35,
