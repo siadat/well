@@ -105,7 +105,7 @@ func TestParser(tt *testing.T) {
 			},
 		},
 		{
-			src: `one «${var:%q} «this is \«three\»» four» end`,
+			src: `one «${var:%q} «this is \«three\»» \$5 dolloars» end`,
 			want: &parser.Root{
 				[]parser.CmdNode{
 					parser.Wrd{`one`},
@@ -128,7 +128,10 @@ func TestParser(tt *testing.T) {
 								},
 							},
 							parser.Whs{` `},
-							parser.Wrd{`four`},
+							parser.Wrd{`$`},
+							parser.Wrd{`5`},
+							parser.Whs{` `},
+							parser.Wrd{`dolloars`},
 						},
 					},
 					parser.Whs{` `},

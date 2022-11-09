@@ -14,10 +14,11 @@ import (
 )
 
 type Parser struct {
-	src     io.Reader
-	root    *ast.Root
-	scanner *scanner.Scanner
-	debug   bool
+	src             io.Reader
+	root            *ast.Root
+	scanner         *scanner.Scanner
+	debug           bool
+	includeComments bool
 }
 
 type ParseError struct {
@@ -31,6 +32,23 @@ func (e ParseError) Error() string {
 func (p *Parser) proceed() scanner.Token {
 	var t, err = p.scanner.NextToken()
 	p.checkErr(err)
+
+	if p.includeComments {
+		return t
+	}
+
+For:
+	for {
+		// This is experimental, not tested
+		switch t.Typ {
+		case token.COMMENT:
+			t, err = p.scanner.NextToken()
+			p.checkErr(err)
+		default:
+			break For
+		}
+	}
+
 	return t
 }
 
@@ -53,11 +71,18 @@ func (p *Parser) MarkAt(at scanner.Pos, msg string, showWhitespaces bool) []stri
 func (p *Parser) init(src io.Reader) error {
 	p.scanner = scanner.NewScanner(src)
 	p.scanner.SetSkipWhitespace(true)
-	p.scanner.SetSkipComment(true)
+	p.scanner.SetIncludeComments(p.includeComments)
 	p.scanner.SetDebug(p.debug)
 
 	var _, err = p.scanner.NextToken()
 	return err
+}
+
+func (p *Parser) SetIncludeComments(v bool) {
+	p.includeComments = v
+	if p.scanner != nil {
+		p.scanner.SetIncludeComments(v)
+	}
 }
 
 func (p *Parser) SetDebug(debug bool) {
@@ -145,8 +170,9 @@ func (p *Parser) parsePrimaryExpr() ast.Expr {
 		}
 		var raw = t.Lit[0] == '`'
 		return &ast.String{
-			Root:     MustParseStr(v, raw, p.debug),
-			Position: t.Pos,
+			Root:      MustParseStr(v, raw, p.debug),
+			StringLit: t.Lit,
+			Position:  t.Pos,
 		}
 	case token.IDENTIFIER:
 		p.proceed()
@@ -262,9 +288,10 @@ func (p *Parser) parseExpr(lhs ast.Expr, minPrec token.Precedence) ast.Expr {
 func (p *Parser) skipOptionalNewlines() {
 	for {
 		var t = p.scanner.CurrToken()
-		if t.Typ == token.NEWLINE {
+		switch t.Typ {
+		case token.NEWLINE:
 			p.proceed()
-		} else {
+		default:
 			return
 		}
 	}
@@ -296,17 +323,15 @@ func (p *Parser) parseBlock() *ast.BlockStmt {
 
 	// function body
 	var stmts []ast.Stmt
+For:
 	for {
 		var t = p.scanner.CurrToken()
-		if t.Typ == token.RBRACE {
-			break
-		}
-		if t.Typ == token.EOF {
-			break
-		}
-		if t.Typ == token.NEWLINE {
+		switch t.Typ {
+		case token.RBRACE, token.EOF:
+			break For
+		case token.NEWLINE:
 			p.proceed()
-			continue
+			continue For
 		}
 		var stmt = p.parseStmt()
 		stmts = append(stmts, stmt)

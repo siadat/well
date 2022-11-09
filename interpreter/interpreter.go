@@ -68,6 +68,7 @@ func (interp *Interpreter) evalParsed(node ast.Node, env Environment) (Object, e
 }
 
 func (interp *Interpreter) builtins() map[string]*Builtin {
+	// TODO: allow mocking external commands for test
 	var builtinsSlice = []*Builtin{
 		{
 			"external", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {

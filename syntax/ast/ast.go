@@ -107,7 +107,8 @@ type Ident struct {
 }
 
 type String struct {
-	Root *strs_parser.Root
+	Root      *strs_parser.Root
+	StringLit string
 
 	Position scanner.Pos
 }

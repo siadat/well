@@ -264,13 +264,7 @@ func (s *CmdScanner) nextToken() (CmdToken, error) {
 		s.readRune() // get the next one
 
 		switch s.currRune {
-		case '«', '»', '‹', '›':
-			// if s.position >= len(s.src)-1 {
-			// 	return CmdToken{
-			// 		Typ: ILLEGAL_TOKEN,
-			// 		Lit: "\\",
-			// 	}, fmt.Errorf("backslash at the end of the source")
-			// }
+		case '«', '»', '‹', '›', '$':
 			var tok = CmdToken{WORD, fmt.Sprintf("%c", s.currRune)}
 			s.readRune()
 			return tok, nil

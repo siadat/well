@@ -16,9 +16,9 @@ type Scanner struct {
 	position     int
 	readPosition int
 
-	nextRune       rune
-	skipWhitespace bool
-	skipComment    bool
+	nextRune        rune
+	skipWhitespace  bool
+	includeComments bool
 
 	debug bool
 }
@@ -64,8 +64,8 @@ func (s *Scanner) SetSkipWhitespace(v bool) {
 	s.skipWhitespace = v
 }
 
-func (s *Scanner) SetSkipComment(v bool) {
-	s.skipComment = v
+func (s *Scanner) SetIncludeComments(v bool) {
+	s.includeComments = v
 }
 
 func (s *Scanner) readRune() {
@@ -259,14 +259,14 @@ func (s *Scanner) nextToken() (Token, error) {
 	case '/':
 		// this can be '/' or '//'
 		if s.nextRune == '/' {
-			if s.skipComment {
+			if s.includeComments {
+				return s.readComment()
+			} else {
 				var ret, err = s.readComment()
 				if err != nil {
 					return ret, err
 				}
 				return s.nextToken()
-			} else {
-				return s.readComment()
 			}
 		} else {
 			var tok = Token{token.QUO, fmt.Sprintf("%c", s.currRune), Pos(start)}

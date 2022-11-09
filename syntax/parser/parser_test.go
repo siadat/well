@@ -116,8 +116,9 @@ func TestParser(tt *testing.T) {
 										Arg: &ast.ParenExpr{
 											Exprs: []ast.Expr{
 												&ast.String{
-													Root:     parser.MustParseStr(`echo «hello ${name}»`, false, true),
-													Position: IgnorePos,
+													Root:      parser.MustParseStr(`echo «hello ${name}»`, false, true),
+													StringLit: `"echo «hello ${name}»"`,
+													Position:  IgnorePos,
 												},
 											},
 											Position: IgnorePos,
@@ -139,8 +140,9 @@ func TestParser(tt *testing.T) {
 										Arg: &ast.ParenExpr{
 											Exprs: []ast.Expr{
 												&ast.String{
-													Root:     parser.MustParseStr(`\w+`, false, true),
-													Position: IgnorePos,
+													Root:      parser.MustParseStr(`\w+`, false, true),
+													StringLit: `"\\w+"`,
+													Position:  IgnorePos,
 												},
 											},
 											Position: IgnorePos,
@@ -153,8 +155,9 @@ func TestParser(tt *testing.T) {
 									Cond: &ast.BinaryExpr{
 										X: &ast.Ident{Name: "x", Position: IgnorePos},
 										Y: &ast.String{
-											Root:     parser.MustParseStr(`.+`, false, true),
-											Position: IgnorePos,
+											Root:      parser.MustParseStr(`.+`, false, true),
+											StringLit: `".+"`,
+											Position:  IgnorePos,
 										},
 										Op:       token.REG,
 										Position: IgnorePos,
@@ -167,8 +170,9 @@ func TestParser(tt *testing.T) {
 										Cond: &ast.BinaryExpr{
 											X: &ast.Ident{Name: "x", Position: IgnorePos},
 											Y: &ast.String{
-												Root:     parser.MustParseStr(`hi`, false, true),
-												Position: IgnorePos,
+												Root:      parser.MustParseStr(`hi`, false, true),
+												StringLit: `"hi"`,
+												Position:  IgnorePos,
 											},
 											Op:       token.NREG,
 											Position: IgnorePos,
