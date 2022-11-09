@@ -21,11 +21,12 @@ var testCases = []struct {
 	{
 		src: `// external(x)
 
+		let x = 1
 		function main() {
 	        let x = "hello"
 	          let y = 3.14
 	        let z = 123
-			  f2(1,   external_capture (  "date" 
+			  f2(1,   external_capture (  "date ${x:%q}" 
 			)   ,,, )
 
 // external(x)
@@ -38,11 +39,12 @@ var testCases = []struct {
 			    return
 	    }
 	    `,
-		want: `function main() {
+		want: `let x = 1
+function main() {
 	let x = "hello"
 	let y = 3.14
 	let z = 123
-	f2(1, external_capture("date"))
+	f2(1, external_capture("date ${x:%q}"))
 }
 
 function f2(x int) {

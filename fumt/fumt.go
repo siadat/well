@@ -39,7 +39,7 @@ func (ft *formater) Format(src io.Reader, out io.Writer) error {
 	}
 
 	var _, err = erroring.CallAndRecover[Error](func() struct{} {
-		fmt.Fprintf(out, ft.format(node))
+		fmt.Fprint(out, ft.format(node))
 		return struct{}{}
 	})
 	return err
@@ -50,14 +50,14 @@ func (ft *formater) format(node ast.Node) string {
 	case *ast.Root:
 		var buf bytes.Buffer
 		for _, decl := range node.Decls {
-			fmt.Fprintf(&buf, "%s", ft.format(decl))
+			fmt.Fprint(&buf, ft.format(decl))
 		}
 		return buf.String()
 	case *ast.BlockStmt:
 		var buf bytes.Buffer
 		ft.indentLevel += 1
 		for _, stmt := range node.Statements {
-			fmt.Fprintf(&buf, "%s", ft.format(stmt))
+			fmt.Fprint(&buf, ft.format(stmt))
 		}
 		ft.indentLevel -= 1
 		return ft.indent() + "{\n" +
