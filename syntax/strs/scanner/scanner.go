@@ -257,6 +257,7 @@ func (s *CmdScanner) nextToken() (CmdToken, error) {
 	//       because readRune() is already called inside those functions.
 	switch s.currRune {
 	case '\\': // escape character
+		// TODO: consider entering literal $ with $$ and « with «« etc...
 		// TODO: Not sure if this is the correct logic
 
 		var rn = s.currRune
