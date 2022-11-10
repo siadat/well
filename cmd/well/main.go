@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/siadat/well/fumt"
 	"github.com/siadat/well/interpreter"
@@ -41,12 +42,21 @@ func main() {
 						return readErr
 					}
 
-					checker := types.NewChecker()
+					var checker = types.NewChecker()
 					checker.SetDebug(cmdCtx.Bool("debug"))
 					var _, checkErr = checker.Check(bytes.NewReader(byts))
 					if checkErr != nil {
 						fmt.Fprintf(os.Stderr, "type checker failed\n")
 						return checkErr
+					}
+
+					var fileDependencies = checker.UnresolvedDependencies()
+					if cmdCtx.Bool("debug") {
+						fmt.Fprintf(os.Stderr, "%d file dependencies\n", len(fileDependencies))
+					}
+					if l := len(fileDependencies); l > 0 {
+						var lines = append([]string{""}, fileDependencies...)
+						return fmt.Errorf("The following external commands and files are undeclared:%s", strings.Join(lines, "\n   "))
 					}
 
 					interp := interpreter.NewInterpreter(os.Stdout, os.Stderr)

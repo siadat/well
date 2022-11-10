@@ -144,6 +144,8 @@ func (p *Parser) parseDecl() ast.Decl {
 		return p.parseLetDecl()
 	case "function":
 		return p.parseFuncDecl()
+	case "external":
+		return p.parseExternalFuncDecl()
 	}
 
 	switch t.Typ {
@@ -346,6 +348,39 @@ For:
 	}
 }
 
+func (p *Parser) parseExternalFuncDecl() ast.Decl {
+	var pos = p.scanner.CurrToken().Pos
+	p.expect(token.IDENTIFIER, "external")
+	p.proceed()
+
+	var identPos = p.scanner.CurrToken().Pos
+	var name = p.expectType(token.IDENTIFIER)
+	p.proceed()
+
+	var signature = p.parseExternalFuncSignature()
+	p.expect(token.ARR, "=>")
+	p.proceed()
+
+	var stmtPos = p.scanner.CurrToken().Pos
+	var stmt = &ast.ReturnStmt{
+		Expr:     p.parseExpr(nil, token.LowestPrecedence),
+		Position: stmtPos,
+	}
+
+	var stmts = &ast.BlockStmt{
+		Statements: []ast.Stmt{stmt},
+		Position:   stmtPos,
+	}
+
+	return &ast.FuncDecl{
+		Name:       &ast.Ident{Name: name.Lit, Position: identPos},
+		Signature:  &signature,
+		Body:       stmts,
+		IsExternal: true,
+		Position:   pos,
+	}
+}
+
 func (p *Parser) parseFuncDecl() ast.Decl {
 	var pos = p.scanner.CurrToken().Pos
 	p.expect(token.IDENTIFIER, "function")
@@ -400,7 +435,7 @@ func (p *Parser) parseFuncSignatureArg() ast.FuncSignatureArg {
 
 	return ast.FuncSignatureArg{
 		Name: name.Lit,
-		Type: typ.Lit,
+		Type: typ.Lit, // TODO: allow types to have constrains, e.g. regular expression or glob
 	}
 }
 
@@ -430,12 +465,25 @@ For:
 	return items
 }
 
+func (p *Parser) parseExternalFuncSignature() ast.FuncSignature {
+	var pos = p.scanner.CurrToken().Pos
+	var args []ast.FuncSignatureArg = parseCsvInParens(p, func(p *Parser) ast.FuncSignatureArg {
+		return p.parseFuncSignatureArg()
+	})
+	return ast.FuncSignature{
+		Args:     args,
+		RetTypes: []string{"string"},
+		Position: pos,
+	}
+}
+
 func (p *Parser) parseFuncSignature() ast.FuncSignature {
 	var pos = p.scanner.CurrToken().Pos
 	var args []ast.FuncSignatureArg = parseCsvInParens(p, func(p *Parser) ast.FuncSignatureArg {
 		return p.parseFuncSignatureArg()
 	})
 
+	// return types
 	var retTypes []string
 	var t = p.scanner.CurrToken()
 	if t.Typ == token.IDENTIFIER {

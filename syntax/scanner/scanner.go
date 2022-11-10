@@ -190,9 +190,14 @@ func (s *Scanner) nextToken() (Token, error) {
 		s.readRune()
 		return tok, nil
 	case '=':
-		// this can be '=' or '=='
+		// this can be '=' or '==' or '=>'
 		if s.nextRune == '=' {
 			var tok = Token{token.EQL, fmt.Sprintf("%c%c", s.currRune, s.nextRune), Pos(start)}
+			s.readRune()
+			s.readRune()
+			return tok, nil
+		} else if s.nextRune == '>' {
+			var tok = Token{token.ARR, fmt.Sprintf("%c%c", s.currRune, s.nextRune), Pos(start)}
 			s.readRune()
 			s.readRune()
 			return tok, nil

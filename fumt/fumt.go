@@ -39,38 +39,38 @@ func (ft *formater) Format(src io.Reader, out io.Writer) error {
 	}
 
 	var _, err = erroring.CallAndRecover[Error](func() struct{} {
-		fmt.Fprint(out, ft.format(node))
+		fmt.Fprint(out, ft.FormatNode(node))
 		return struct{}{}
 	})
 	return err
 }
 
-func (ft *formater) format(node ast.Node) string {
+func (ft *formater) FormatNode(node ast.Node) string {
 	switch node := node.(type) {
 	case *ast.Root:
 		var buf bytes.Buffer
 		for _, decl := range node.Decls {
-			fmt.Fprint(&buf, ft.format(decl))
+			fmt.Fprint(&buf, ft.FormatNode(decl))
 		}
 		return buf.String()
 	case *ast.BlockStmt:
 		var buf bytes.Buffer
 		ft.indentLevel += 1
 		for _, stmt := range node.Statements {
-			fmt.Fprint(&buf, ft.format(stmt))
+			fmt.Fprint(&buf, ft.FormatNode(stmt))
 		}
 		ft.indentLevel -= 1
 		return ft.indent() + "{\n" +
 			buf.String() +
 			ft.indent() + "}\n"
 	case *ast.FuncDecl:
-		return ft.indent() + fmt.Sprintf("function %s%s %s\n", node.Name.Name, ft.format(node.Signature), ft.format(node.Body))
+		return ft.indent() + fmt.Sprintf("function %s%s %s\n", node.Name.Name, ft.FormatNode(node.Signature), ft.FormatNode(node.Body))
 	case *ast.LetDecl:
-		return ft.indent() + fmt.Sprintf("let %s = %s\n", node.Name.Name, ft.format(node.Rhs))
+		return ft.indent() + fmt.Sprintf("let %s = %s\n", node.Name.Name, ft.FormatNode(node.Rhs))
 	case *ast.ExprStmt:
-		return ft.indent() + fmt.Sprintf("%s\n", ft.format(node.X))
+		return ft.indent() + fmt.Sprintf("%s\n", ft.FormatNode(node.X))
 	case *ast.CallExpr:
-		return fmt.Sprintf("%s%s", ft.format(node.Fun), ft.format(node.Arg))
+		return fmt.Sprintf("%s%s", ft.FormatNode(node.Fun), ft.FormatNode(node.Arg))
 	case *ast.Ident:
 		return node.Name
 	case *ast.String:
@@ -111,14 +111,14 @@ func (ft *formater) format(node ast.Node) string {
 		if node.Expr == nil {
 			return ft.indent() + "return\n"
 		}
-		return ft.indent() + fmt.Sprintf("return %s\n", ft.format(node.Expr))
+		return ft.indent() + fmt.Sprintf("return %s\n", ft.FormatNode(node.Expr))
 	case *ast.ParenExpr:
 		var perline = false
 		if perline {
 			var buf bytes.Buffer
 			ft.indentLevel += 1
 			for _, expr := range node.Exprs {
-				fmt.Fprintf(&buf, "%s%s,\n", ft.indent(), ft.format(expr))
+				fmt.Fprintf(&buf, "%s%s,\n", ft.indent(), ft.FormatNode(expr))
 			}
 			ft.indentLevel -= 1
 			return "(\n" +
@@ -127,7 +127,7 @@ func (ft *formater) format(node ast.Node) string {
 		} else {
 			var exprs []string
 			for _, expr := range node.Exprs {
-				exprs = append(exprs, ft.format(expr))
+				exprs = append(exprs, ft.FormatNode(expr))
 			}
 			return "(" + strings.Join(exprs, ", ") + ")"
 		}

@@ -44,6 +44,7 @@ const (
 	QUO    // /
 	REM    // %
 	EQL    // ==
+	ARR    // =>
 	REG    // ~~
 	LSS    // <
 	GTR    // >

@@ -30,9 +30,10 @@ type LetDecl struct {
 }
 
 type FuncDecl struct {
-	Name      *Ident
-	Signature *FuncSignature
-	Body      *BlockStmt
+	Name       *Ident
+	Signature  *FuncSignature
+	Body       *BlockStmt
+	IsExternal bool
 
 	Position scanner.Pos
 }
