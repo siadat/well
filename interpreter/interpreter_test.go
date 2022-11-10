@@ -20,7 +20,7 @@ var testCases = []struct {
 	{
 		src: `
 	    function main() {
-	        external("echo 'hello'")
+	        pipe("echo 'hello'")
 	    }
 	    `,
 		wantObj:    nil,
@@ -34,7 +34,7 @@ var testCases = []struct {
 			if "hello" ~~ "ll" {
 			  return true
 			}
-			external("ping -c1 4.2.2.4")
+			pipe("ping -c1 4.2.2.4")
 		}
 		function f2(s1 string, s2 string) (string) {
 			return "s1=${s1} and s2=${s2}"
@@ -43,7 +43,7 @@ var testCases = []struct {
 		function main() {
 			let s1 = "hi"
 			let bye = "bye"
-			external(
+			pipe(
 				"echo 'hello'",
 				"nl",
 			)

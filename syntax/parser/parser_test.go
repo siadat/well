@@ -75,7 +75,7 @@ func TestParser(tt *testing.T) {
 			src: `
 			function main() string {
 				let x = 3
-				external("echo «hello ${name}»")
+				pipe("echo «hello ${name}»")
 				let input = read("\\w+")
 				if x ~~ ".+" {
 				  // ...
@@ -115,7 +115,7 @@ func TestParser(tt *testing.T) {
 								&ast.ExprStmt{
 									X: &ast.CallExpr{
 										Fun: &ast.Ident{
-											Name:     "external",
+											Name:     "pipe",
 											Position: IgnorePos,
 										},
 										Arg: &ast.ParenExpr{

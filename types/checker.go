@@ -93,7 +93,7 @@ func (tc *typeChecker) check(node ast.Node) {
 		switch fun := node.Fun.(type) {
 		case *ast.Ident:
 			switch fun.Name {
-			case "external", "external_capture":
+			case "pipe", "pipe_capture":
 				for _, expr := range node.Arg.Exprs {
 					switch expr := expr.(type) {
 					case *ast.CallExpr:
@@ -102,10 +102,10 @@ func (tc *typeChecker) check(node ast.Node) {
 							var command = formater.FormatNode(expr)
 							tc.commands[command] = node.Pos()
 						} else {
-							panic(tc.newError(node.Pos(), "args to external must be simple call expressions"))
+							panic(tc.newError(node.Pos(), "args to pipe must be simple call expressions"))
 						}
 					default:
-						panic(tc.newError(node.Pos(), "args to external must be call expressions"))
+						panic(tc.newError(node.Pos(), "args to pipe must be call expressions"))
 					}
 				}
 			}

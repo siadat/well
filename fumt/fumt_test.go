@@ -19,17 +19,17 @@ var testCases = []struct {
 	want string
 }{
 	{
-		src: `// external(x)
+		src: `// pipe(x)
 
 		let x = 1
 		function main() {
 	        let x = "hello"
 	          let y = 3.14
 	        let z = 123
-			  f2(1,   external_capture (  "date ${x:%q}" 
+			  f2(1,   pipe_capture (  "date ${x:%q}" 
 			)   ,,, )
 
-// external(x)
+// pipe(x)
 
 	    }
 
@@ -44,7 +44,7 @@ function main() {
 	let x = "hello"
 	let y = 3.14
 	let z = 123
-	f2(1, external_capture("date ${x:%q}"))
+	f2(1, pipe_capture("date ${x:%q}"))
 }
 
 function f2(x int) {

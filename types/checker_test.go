@@ -26,7 +26,7 @@ var testCases = []struct {
 	        let x = "hello"
 	        let y = 3.14
 	        let z = 123
-			// external(x)
+			// pipe(x)
 	    }
 	    `,
 		want: map[ast.Expr]types.Type{
@@ -40,7 +40,7 @@ var testCases = []struct {
 			&ast.Float{Value: 3.14, Position: 63}:  types.WellType{"Float"},
 			&ast.String{Root: parser.MustParseStr("hello", false, true), StringLit: `"hello"`, Position: 38}: types.WellType{"String"},
 
-			// ast.Ident{Name: "external", Position: 92}: types.WellType{"Function"},
+			// ast.Ident{Name: "pipe", Position: 92}: types.WellType{"Function"},
 			// ast.Ident{Name: "x", Position: 101}:       types.WellType{"String"},
 		},
 	},

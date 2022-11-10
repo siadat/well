@@ -3,11 +3,9 @@ package interpreter
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -71,7 +69,7 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 	// TODO: allow mocking external commands for test
 	var builtinsSlice = []*Builtin{
 		{
-			"external", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+			"pipe", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				var args []string
 				for _, a := range posArgs {
 					var arg = a.(*String)
@@ -86,35 +84,7 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 			},
 		},
 		{
-			"external_json", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
-				var arg = posArgs[0].(*String)
-				if interp.Debug {
-					fmt.Fprintf(interp.Stderr, "call external command %#v\n", arg)
-				}
-				var stdout bytes.Buffer
-				var stderr bytes.Buffer
-				var cmd = exec.Command(arg.AsArgs[0], arg.AsArgs[1:]...)
-				cmd.Stdout = &stdout
-				cmd.Stderr = &stderr
-
-				var err = cmd.Run()
-				var retBuf bytes.Buffer
-				var enc = json.NewEncoder(&retBuf)
-				var encodeErr = enc.Encode(map[string]string{
-					"stdout": stdout.String(),
-					"stderr": stderr.String(),
-				})
-				if encodeErr != nil {
-					return nil, fmt.Errorf("encoding json failed: %s", encodeErr)
-				}
-				if err != nil {
-					return nil, fmt.Errorf("external command failed: %v, output:\n%s", err, strings.TrimSpace(retBuf.String()))
-				}
-				return &String{AsSingle: strings.TrimSpace(retBuf.String())}, nil
-			},
-		},
-		{
-			"external_capture", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+			"pipe_capture", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				var args []string
 				for _, a := range posArgs {
 					var arg = a.(*String)
