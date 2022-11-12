@@ -99,6 +99,8 @@ type Precedence int
 
 var LowestPrecedence Precedence = 0
 var Precedences = map[Token]Precedence{
+	PIPE: 1, // |
+
 	ADD: 1,
 	SUB: 1,
 

@@ -1,10 +1,12 @@
 package parser_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/kr/pretty"
 	"github.com/siadat/well/syntax/ast"
 	"github.com/siadat/well/syntax/parser"
 	"github.com/siadat/well/syntax/scanner"
@@ -84,6 +86,7 @@ func TestParser(tt *testing.T) {
 				} else {
 				  // ...
 				}
+				curl() | jq() | head()
 				return input
 			}
 			`,
@@ -194,6 +197,50 @@ func TestParser(tt *testing.T) {
 									},
 									Position: IgnorePos,
 								},
+								&ast.ExprStmt{
+									X: &ast.BinaryExpr{
+										X: &ast.CallExpr{
+											Fun: &ast.Ident{
+												Name:     "curl",
+												Position: IgnorePos,
+											},
+											Arg: &ast.ParenExpr{
+												Exprs:    nil,
+												Position: IgnorePos,
+											},
+											Position: IgnorePos,
+										},
+										Y: &ast.BinaryExpr{
+											X: &ast.CallExpr{
+												Fun: &ast.Ident{
+													Name:     "jq",
+													Position: IgnorePos,
+												},
+												Arg: &ast.ParenExpr{
+													Exprs:    nil,
+													Position: IgnorePos,
+												},
+												Position: IgnorePos,
+											},
+											Y: &ast.CallExpr{
+												Fun: &ast.Ident{
+													Name:     "head",
+													Position: IgnorePos,
+												},
+												Arg: &ast.ParenExpr{
+													Exprs:    nil,
+													Position: IgnorePos,
+												},
+												Position: IgnorePos,
+											},
+											Op:       token.PIPE,
+											Position: IgnorePos,
+										},
+										Op:       token.PIPE,
+										Position: IgnorePos,
+									},
+									Position: IgnorePos,
+								},
 								&ast.ReturnStmt{
 									Expr: &ast.Ident{
 										Name:     "input",
@@ -224,7 +271,7 @@ func TestParser(tt *testing.T) {
 		var cmpOpt = cmp.FilterValues(func(p1, p2 scanner.Pos) bool { return p1 == IgnorePos || p2 == IgnorePos || p1 == p2 }, cmp.Ignore())
 
 		if diff := cmp.Diff(tc.want, got, cmpOpt); diff != "" {
-			// fmt.Printf("got: %# v\n", pretty.Formatter(got))
+			fmt.Printf("got: %# v\n", pretty.Formatter(got))
 			tt.Fatalf("mismatching results\nsrc:\n%s\ndiff guide:\n  - want\n  + got\ndiff:\n%s", src, diff)
 		}
 	}

@@ -2,17 +2,17 @@ package interpreter
 
 import (
 	"bufio"
-	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/siadat/well/erroring"
-	"github.com/siadat/well/piper"
 	"github.com/siadat/well/syntax/ast"
 	"github.com/siadat/well/syntax/parser"
 	"github.com/siadat/well/syntax/scanner"
@@ -30,7 +30,8 @@ type Interpreter struct {
 
 	parser *parser.Parser
 
-	currEvalNode ast.Node
+	currEvalNode    ast.Node
+	currPipedObject Object
 }
 
 func NewInterpreter(stdout, stderr io.Writer) *Interpreter {
@@ -68,35 +69,80 @@ func (interp *Interpreter) evalParsed(node ast.Node, env Environment) (Object, e
 func (interp *Interpreter) builtins() map[string]*Builtin {
 	// TODO: allow mocking external commands for test
 	var builtinsSlice = []*Builtin{
+		// {
+		// 	"pipe", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+		// 		var args []string
+		// 		for _, a := range posArgs {
+		// 			var arg = a.(*String)
+		// 			// TODO: this is already parsed, but
+		// 			// piper.External is also parsing it.
+		// 			// Change piper.External to accept an
+		// 			// already parsed str.
+		// 			args = append(args, arg.AsSingle)
+		// 		}
+		// 		var err = piper.External(args...).Read(interp.Stdout, interp.Stderr)
+		// 		return nil, err
+		// 	},
+		// },
+		// {
+		// 	"pipe_capture", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+		// 		var args []string
+		// 		for _, a := range posArgs {
+		// 			var arg = a.(*String)
+		// 			// TODO: this is already parsed, but
+		// 			// piper.External is also parsing it.
+		// 			// Change piper.External to accept an
+		// 			// already parsed str.
+		// 			args = append(args, arg.AsSingle)
+		// 		}
+		// 		var stdout bytes.Buffer
+		// 		var err = piper.External(args...).Read(&stdout, interp.Stderr)
+		// 		return &String{AsSingle: stdout.String()}, err
+		// 	},
+		// },
 		{
-			"pipe", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
-				var args []string
-				for _, a := range posArgs {
-					var arg = a.(*String)
-					// TODO: this is already parsed, but
-					// piper.External is also parsing it.
-					// Change piper.External to accept an
-					// already parsed str.
-					args = append(args, arg.AsSingle)
+			"_exec", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+				if len(posArgs) != 2 {
+					return nil, fmt.Errorf("_exec expects 2 args, got %d", len(posArgs))
 				}
-				var err = piper.External(args...).Read(interp.Stdout, interp.Stderr)
-				return nil, err
+
+				var stdin = posArgs[0].(*PipeStream).ReadCloser
+				var cmdArgs = posArgs[1].(*String).AsArgs
+				var cmd = exec.CommandContext(context.TODO(), cmdArgs[0], cmdArgs[1:]...)
+
+				// var pr, pw, err = os.Pipe()
+				cmd.Stdin = stdin
+				var stdout, err = cmd.StdoutPipe()
+				if err != nil {
+					return nil, err
+				}
+
+				var runErr = cmd.Start()
+				return &PipeStream{ReadCloser: stdout}, runErr
 			},
 		},
 		{
-			"pipe_capture", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
-				var args []string
-				for _, a := range posArgs {
-					var arg = a.(*String)
-					// TODO: this is already parsed, but
-					// piper.External is also parsing it.
-					// Change piper.External to accept an
-					// already parsed str.
-					args = append(args, arg.AsSingle)
+			"print_stream", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+				if len(posArgs) != 1 {
+					return nil, fmt.Errorf("print_stream expects 1 args, got %d", len(posArgs))
 				}
-				var stdout bytes.Buffer
-				var err = piper.External(args...).Read(&stdout, interp.Stderr)
-				return &String{AsSingle: stdout.String()}, err
+				var arg = posArgs[0]
+				if arg == nil {
+					return nil, fmt.Errorf("argument is %v", arg)
+				}
+				var stream = arg.(*PipeStream)
+				for {
+					var buf = make([]byte, 128)
+					var n, err = stream.ReadCloser.Read(buf)
+					if err == io.EOF {
+						break
+					}
+					if err != nil {
+						return nil, err
+					}
+					fmt.Fprint(interp.Stdout, string(buf[:n]))
+				}
+				return nil, nil
 			},
 		},
 		{
@@ -258,7 +304,7 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 	case *ast.ExprStmt:
 		return interp.eval(node.X, env)
 	case *ast.CallExpr:
-		funcDef := interp.eval(node.Fun, env)
+		var funcDef = interp.eval(node.Fun, env)
 		if interp.Verbose {
 			switch f := node.Fun.(type) {
 			case *ast.Ident:
@@ -287,7 +333,10 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 		case *Function:
 			var callLen = len(node.Arg.Exprs)
 			var declLen = len(funcDef.Signature.Args)
-			if callLen != declLen {
+			if interp.currPipedObject != nil && callLen != (declLen-1) {
+				panic(interp.newError(node.Arg.Pos(), "%s takes %d args one of which is piped, call is sending only %d arg", funcDef, declLen, callLen))
+			}
+			if interp.currPipedObject == nil && callLen != declLen {
 				panic(interp.newError(node.Arg.Pos(), "%s takes %d args, call is sending %d arg", funcDef, declLen, callLen))
 			}
 
@@ -296,8 +345,16 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 				positionalArgNames = append(positionalArgNames, param.Name)
 			}
 
-			var positionalIdx = 0
 			var newEnv = env.Global().NewScope()
+			var positionalIdx = 0
+
+			if interp.currPipedObject != nil {
+				var name = positionalArgNames[positionalIdx]
+				interp.mustSet(newEnv, name, interp.currPipedObject)
+				positionalIdx += 1
+
+			}
+
 			for _, arg := range node.Arg.Exprs {
 				var obj = interp.eval(arg, env) // here we should use the old env
 				var name = positionalArgNames[positionalIdx]
@@ -352,19 +409,29 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 	case *ast.Float:
 		return &Float{Value: node.Value}
 	case *ast.BinaryExpr:
-		var x = interp.eval(node.X, env)
-		var y = interp.eval(node.Y, env)
-
-		// TODO: check regexp compilation statically on a best effort basis
-		var re = regexp.MustCompile(y.(*String).AsSingle)
-
 		switch node.Op {
 		case token.REG:
+			var x = interp.eval(node.X, env)
+			var y = interp.eval(node.Y, env)
+			// TODO: check regexp compilation statically on a best effort basis
+			var re = regexp.MustCompile(y.(*String).AsSingle)
 			return &Boolean{Value: re.MatchString(x.(*String).AsSingle)}
 		case token.NREG:
+			var x = interp.eval(node.X, env)
+			var y = interp.eval(node.Y, env)
+			// TODO: check regexp compilation statically on a best effort basis
+			var re = regexp.MustCompile(y.(*String).AsSingle)
 			return &Boolean{Value: re.MatchString(x.(*String).AsSingle)}
 		case token.EQL:
+			var x = interp.eval(node.X, env)
+			var y = interp.eval(node.Y, env)
 			return &Boolean{Value: x.GoValue() == y.GoValue()}
+		case token.PIPE:
+			var x = interp.eval(node.X, env)
+			interp.currPipedObject = x
+			var y = interp.eval(node.Y, env)
+			interp.currPipedObject = nil
+			return y
 		default:
 			panic(interp.newError(node.Pos(), "unsupported binary operator %q", node.Op))
 		}

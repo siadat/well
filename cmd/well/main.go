@@ -59,10 +59,13 @@ func main() {
 						return fmt.Errorf("The following external commands and files are undeclared:%s", strings.Join(lines, "\n   "))
 					}
 
-					interp := interpreter.NewInterpreter(os.Stdout, os.Stderr)
+					var interp = interpreter.NewInterpreter(os.Stdout, os.Stderr)
 					interp.SetVerbose(cmdCtx.Bool("verbose"))
 					interp.SetDebug(cmdCtx.Bool("debug"))
-					env := interpreter.NewEnvironment()
+					var env = interpreter.NewEnvironment()
+					if err := env.Set("MainStdin", &interpreter.PipeStream{ReadCloser: os.Stdin}); err != nil {
+						return err
+					}
 					env.SetDebug(cmdCtx.Bool("debug"))
 
 					// TODO: allow passing CLI args as function arguments. Either:

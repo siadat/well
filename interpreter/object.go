@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/siadat/well/syntax/ast"
 )
@@ -15,6 +16,12 @@ type Object interface {
 type Paren struct {
 	Objects []Object
 }
+
+type PipeStream struct {
+	ReadCloser io.ReadCloser
+}
+
+// WriteCloser io.WriteCloser
 
 type Integer struct {
 	Value int
@@ -58,6 +65,7 @@ type Builtin struct {
 var NoValue = struct{}{}
 
 func (i *Paren) String() string      { return fmt.Sprintf("%#v", i.Objects) }
+func (i *PipeStream) String() string { return fmt.Sprintf("%#v", i.ReadCloser) }
 func (i *Integer) String() string    { return fmt.Sprintf("%d", i.Value) }
 func (i *Float) String() string      { return fmt.Sprintf("%f", i.Value) }
 func (i *String) String() string     { return fmt.Sprintf("%s", i.AsSingle) }
@@ -68,6 +76,7 @@ func (i *ReturnStmt) String() string { return fmt.Sprintf("retrun %s", i.Expr.St
 func (i *Builtin) String() string    { return fmt.Sprintf("builtin %s", i.Name) }
 
 func (i *Paren) GoValue() interface{}      { return i.Objects }
+func (i *PipeStream) GoValue() interface{} { return nil /* internal? */ }
 func (i *Integer) GoValue() interface{}    { return i.Value }
 func (i *Float) GoValue() interface{}      { return i.Value }
 func (i *String) GoValue() interface{}     { return i.AsSingle }
@@ -78,6 +87,7 @@ func (i *ReturnStmt) GoValue() interface{} { return NoValue }
 func (i *Builtin) GoValue() interface{}    { return NoValue }
 
 func (i *Paren) isObject()      {}
+func (i *PipeStream) isObject() {}
 func (i *Integer) isObject()    {}
 func (i *Float) isObject()      {}
 func (i *String) isObject()     {}

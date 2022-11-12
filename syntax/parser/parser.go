@@ -362,20 +362,29 @@ func (p *Parser) parseExternalFuncDecl() ast.Decl {
 	p.proceed()
 
 	var stmtPos = p.scanner.CurrToken().Pos
-	var stmt = &ast.ReturnStmt{
-		Expr:     p.parseExpr(nil, token.LowestPrecedence),
-		Position: stmtPos,
-	}
-
-	var stmts = &ast.BlockStmt{
-		Statements: []ast.Stmt{stmt},
-		Position:   stmtPos,
-	}
+	var expr = p.parseExpr(nil, token.LowestPrecedence)
 
 	return &ast.FuncDecl{
-		Name:       &ast.Ident{Name: name.Lit, Position: identPos},
-		Signature:  &signature,
-		Body:       stmts,
+		Name:      &ast.Ident{Name: name.Lit, Position: identPos},
+		Signature: &signature,
+		Body: &ast.BlockStmt{
+			Statements: []ast.Stmt{
+				&ast.ReturnStmt{
+					Expr: &ast.CallExpr{
+						Fun: &ast.Ident{Name: "_exec", Position: stmtPos},
+						Arg: &ast.ParenExpr{
+							Exprs: []ast.Expr{
+								// &ast.Ident{Name: "_stdin", Position: stmtPos},
+								&ast.Ident{Name: "stdin", Position: stmtPos},
+								expr,
+							},
+						},
+					},
+					Position: stmtPos,
+				},
+			},
+			Position: stmtPos,
+		},
 		IsExternal: true,
 		Position:   pos,
 	}

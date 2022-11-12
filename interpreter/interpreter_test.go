@@ -3,6 +3,7 @@ package interpreter_test
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -19,8 +20,10 @@ var testCases = []struct {
 }{
 	{
 		src: `
+		external echo(stdin reader, s string) => "echo ${s:%q}"
+
 	    function main() {
-	        pipe("echo 'hello'")
+	        print_stream(echo(MainStdin, "hello"))
 	    }
 	    `,
 		wantObj:    nil,
@@ -28,9 +31,9 @@ var testCases = []struct {
 	},
 	{
 		src: `
-		external echo(s string) => "echo ${s:%q}"
-		external ping(ip string) => "ping -c1 ${ip:%q}"
-		external nl() => "nl"
+		external echo(stdin reader, s string) => "echo ${s:%q}"
+		external ping(stdin reader, ip string) => "ping -c1 ${ip:%q}"
+		external nl(stdin reader) => "nl"
 
 		function greet(s1 string, s2 string) {
 			println(s1, "and", s2)
@@ -38,8 +41,8 @@ var testCases = []struct {
 			if "hello" ~~ "ll" {
 			  return true
 			}
-			pipe("ping -c1 4.2.2.4")
-			pipe(ping("127.0.0.1"))
+			print_stream(ping(MainStdin, "4.2.2.4"))
+			print_stream(ping(MainStdin, "127.0.0.1"))
 		}
 		function f2(s1 string, s2 string) (string) {
 			return "s1=${s1} and s2=${s2}"
@@ -48,10 +51,8 @@ var testCases = []struct {
 		function main() {
 			let s1 = "hi"
 			let bye = "bye"
-			pipe(
-				"echo 'hello1'",
-				nl(),
-			)
+			let out = MainStdin | echo("hello1") | nl()
+			print_stream(out)
 			let res = greet(s1, bye)
 			println(res)
 		}
@@ -65,12 +66,17 @@ func TestParser(tt *testing.T) {
 	for ti, tc := range testCases {
 		var src = tc.src
 		src = scanner.FormatSrc(src, true)
+		fmt.Println("testing ->")
+		fmt.Println(src)
 
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
 		interp := interpreter.NewInterpreter(&stdout, &stderr)
 		interp.SetDebug(true)
-		env := interpreter.NewEnvironment()
+		var env = interpreter.NewEnvironment()
+		if err := env.Set("MainStdin", &interpreter.PipeStream{ReadCloser: os.Stdin}); err != nil {
+			tt.Fatal(err)
+		}
 		env.SetDebug(true)
 		gotResult, err := interp.Eval(strings.NewReader(tc.src), env)
 		if err != nil {

@@ -118,6 +118,8 @@ func (tc *typeChecker) check(node ast.Node) {
 		// NoOp
 	case *ast.FuncSignature:
 		// TODO
+	case *ast.BinaryExpr:
+		// TODO
 	case *ast.FuncDecl:
 		tc.types[node.Name] = WellType{"Function"}
 
