@@ -278,7 +278,7 @@ func (s *Scanner) nextToken() (Token, error) {
 			s.readRune()
 			return tok, nil
 		}
-	case '"', '`':
+	case '"', '`': // TODO: add multiline strings with """..."""
 		return s.readString(s.currRune)
 	case ' ', '\t':
 		if s.skipWhitespace {

@@ -107,6 +107,7 @@ func main() {
 					return formater.Format(bytes.NewReader(byts), os.Stdout)
 				},
 			},
+			// TODO: a subcommand to generate Bash script to handle the risk of "What if we change our mind?" before getting approval.
 		},
 	}
 	if err := app.Run(os.Args); err != nil {
