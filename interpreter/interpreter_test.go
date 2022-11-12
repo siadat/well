@@ -28,6 +28,10 @@ var testCases = []struct {
 	},
 	{
 		src: `
+		external echo(s string) => "echo ${s:%q}"
+		external ping(ip string) => "ping -c1 ${ip:%q}"
+		external nl() => "nl"
+
 		function greet(s1 string, s2 string) {
 			println(s1, "and", s2)
 			println(f2(0, 0))
@@ -35,6 +39,7 @@ var testCases = []struct {
 			  return true
 			}
 			pipe("ping -c1 4.2.2.4")
+			pipe(ping("127.0.0.1"))
 		}
 		function f2(s1 string, s2 string) (string) {
 			return "s1=${s1} and s2=${s2}"
@@ -44,15 +49,15 @@ var testCases = []struct {
 			let s1 = "hi"
 			let bye = "bye"
 			pipe(
-				"echo 'hello'",
-				"nl",
+				"echo 'hello1'",
+				nl(),
 			)
 			let res = greet(s1, bye)
 			println(res)
 		}
 		`,
 		wantObj:    nil,
-		wantStdout: "     1\thello\nhi and bye\ns1=0 and s2=0\ntrue\n",
+		wantStdout: "     1\thello1\nhi and bye\ns1=0 and s2=0\ntrue\n",
 	},
 }
 
