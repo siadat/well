@@ -68,37 +68,6 @@ func (interp *Interpreter) evalParsed(node ast.Node, env Environment) (Object, e
 func (interp *Interpreter) builtins() map[string]*Builtin {
 	// TODO: allow mocking external commands for test
 	var builtinsSlice = []*Builtin{
-		// {
-		// 	"pipe", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
-		// 		var args []string
-		// 		for _, a := range posArgs {
-		// 			var arg = a.(*String)
-		// 			// TODO: this is already parsed, but
-		// 			// piper.External is also parsing it.
-		// 			// Change piper.External to accept an
-		// 			// already parsed str.
-		// 			args = append(args, arg.AsSingle)
-		// 		}
-		// 		var err = piper.External(args...).Read(interp.Stdout, interp.Stderr)
-		// 		return nil, err
-		// 	},
-		// },
-		// {
-		// 	"pipe_capture", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
-		// 		var args []string
-		// 		for _, a := range posArgs {
-		// 			var arg = a.(*String)
-		// 			// TODO: this is already parsed, but
-		// 			// piper.External is also parsing it.
-		// 			// Change piper.External to accept an
-		// 			// already parsed str.
-		// 			args = append(args, arg.AsSingle)
-		// 		}
-		// 		var stdout bytes.Buffer
-		// 		var err = piper.External(args...).Read(&stdout, interp.Stderr)
-		// 		return &String{AsSingle: stdout.String()}, err
-		// 	},
-		// },
 		{
 			"_exec", func(pipedArg Object, posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				if len(posArgs) != 1 {
@@ -184,12 +153,6 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 				fmt.Fprintf(interp.Stderr, "%s\n", msg)
 				os.Exit(code)
 				return nil, nil
-				// var scanner = bufio.NewScanner(os.Stdin)
-				// scanner.Scan()
-				// if err := scanner.Err(); err != nil {
-				// 	return nil, err
-				// }
-				// return &String{AsSingle: scanner.Text()}, nil
 			},
 		},
 		{
@@ -424,7 +387,6 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 				Name:      node.Name.Name,
 				Signature: node.Signature,
 				Body:      node.Body,
-				// Env:       env, // TODO: env.NewScope()?
 			},
 		)
 		// Old note: We return nil, because function declaration in this

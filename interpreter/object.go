@@ -21,8 +21,6 @@ type PipeStream struct {
 	ReadCloser io.ReadCloser
 }
 
-// WriteCloser io.WriteCloser
-
 type Integer struct {
 	Value int
 }
@@ -50,7 +48,6 @@ type Function struct {
 	Name      string
 	Signature *ast.FuncSignature
 	Body      *ast.BlockStmt
-	// Env       Environment
 }
 
 type ReturnStmt struct {
