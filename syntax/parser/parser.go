@@ -291,7 +291,7 @@ func (p *Parser) parseExpr(lhs ast.Expr, minPrec token.Precedence) ast.Expr {
 			lhs = &ast.CallExpr{
 				Fun:      lhs,
 				Arg:      paren,
-				PipedArg: &ast.ParenExpr{Exprs: nil}, // will be filled by interpreter, TODO: fill it during parsing
+				PipedArg: &ast.ParenExpr{Exprs: nil},
 				Position: lhs.Pos(),
 			}
 		default:
@@ -299,11 +299,12 @@ func (p *Parser) parseExpr(lhs ast.Expr, minPrec token.Precedence) ast.Expr {
 			p.proceed()
 
 			var rhs = p.parseExpr(nil, prec)
-			switch rhs := rhs.(type) {
-			case *ast.CallExpr:
-				rhs.PipedArg.Exprs = []ast.Expr{lhs}
-				lhs = rhs
-			default:
+
+			var rhsCallExpr, isCallExpr = rhs.(*ast.CallExpr)
+			if tk.Typ == token.PIPE && isCallExpr {
+				rhsCallExpr.PipedArg.Exprs = []ast.Expr{lhs}
+				lhs = rhsCallExpr
+			} else {
 				lhs = &ast.BinaryExpr{
 					X:        lhs,
 					Y:        rhs,
@@ -421,8 +422,6 @@ func (p *Parser) parseExternalFuncDecl() ast.Decl {
 						Fun: &ast.Ident{Name: "_exec", Position: stmtPos},
 						Arg: &ast.ParenExpr{
 							Exprs: []ast.Expr{
-								// &ast.Ident{Name: "_stdin", Position: stmtPos},
-								// &ast.Ident{Name: "stdin", Position: stmtPos},
 								expr,
 							},
 						},
