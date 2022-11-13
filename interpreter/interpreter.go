@@ -30,8 +30,8 @@ type Interpreter struct {
 
 	parser *parser.Parser
 
-	currEvalNode    ast.Node
-	currPipedObject Object
+	currEvalNode ast.Node
+	//currPipedObject Object
 }
 
 func NewInterpreter(stdout, stderr io.Writer) *Interpreter {
@@ -101,13 +101,16 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 		// 	},
 		// },
 		{
-			"_exec", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
-				if len(posArgs) != 2 {
-					return nil, fmt.Errorf("_exec expects 2 args, got %d", len(posArgs))
+			"_exec", func(pipedArg Object, posArgs []Object, kvArgs map[string]Object) (Object, error) {
+				if len(posArgs) != 1 {
+					return nil, fmt.Errorf("_exec expects 1 args, got %d", len(posArgs))
 				}
 
-				var stdin = posArgs[0].(*PipeStream).ReadCloser
-				var cmdArgs = posArgs[1].(*String).AsArgs
+				var stdin io.Reader
+				if pipedArg != nil {
+					stdin = pipedArg.(*PipeStream).ReadCloser
+				}
+				var cmdArgs = posArgs[0].(*String).AsArgs
 				var cmd = exec.CommandContext(context.TODO(), cmdArgs[0], cmdArgs[1:]...)
 
 				// var pr, pw, err = os.Pipe()
@@ -122,7 +125,7 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 			},
 		},
 		{
-			"print_stream", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+			"print_stream", func(pipedArg Object, posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				if len(posArgs) != 1 {
 					return nil, fmt.Errorf("print_stream expects 1 args, got %d", len(posArgs))
 				}
@@ -146,7 +149,7 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 			},
 		},
 		{
-			"println", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+			"println", func(pipedArg Object, posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				for i, arg := range posArgs {
 					if arg == nil {
 						return nil, fmt.Errorf("argument %d value is %v", i+1, arg)
@@ -161,7 +164,7 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 			},
 		},
 		{
-			"print", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+			"print", func(pipedArg Object, posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				for i, arg := range posArgs {
 					fmt.Fprint(interp.Stdout, arg.GoValue())
 					if i != len(posArgs)-1 {
@@ -173,7 +176,7 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 			},
 		},
 		{
-			"exit", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+			"exit", func(pipedValue Object, posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				if len(posArgs) != 2 {
 					return nil, fmt.Errorf("read expects 2 args, got %d", len(posArgs))
 				}
@@ -191,7 +194,7 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 			},
 		},
 		{
-			"read", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+			"read", func(pipedValue Object, posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				if len(posArgs) != 0 {
 					return nil, fmt.Errorf("read expects 0 args, got %d", len(posArgs))
 				}
@@ -204,7 +207,7 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 			},
 		},
 		{
-			"read_regex", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+			"read_regex", func(pipedValue Object, posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				if len(posArgs) != 1 {
 					return nil, fmt.Errorf("read expects 1 arg, got %d", len(posArgs))
 				}
@@ -228,7 +231,7 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 			},
 		},
 		{
-			"read_int", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+			"read_int", func(pipedValue Object, posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				if len(posArgs) > 1 {
 					return nil, fmt.Errorf("read expects 0 or 1 arg, got %d", len(posArgs))
 				}
@@ -262,7 +265,7 @@ func (interp *Interpreter) builtins() map[string]*Builtin {
 			},
 		},
 		{
-			"date", func(posArgs []Object, kvArgs map[string]Object) (Object, error) {
+			"date", func(pipedValue Object, posArgs []Object, kvArgs map[string]Object) (Object, error) {
 				return &String{AsSingle: fmt.Sprintf("%v", time.Now())}, nil
 			},
 		},
@@ -291,10 +294,17 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 		for _, decl := range node.Decls {
 			interp.eval(decl, env)
 		}
-		return interp.eval(&ast.CallExpr{
-			Fun: &ast.Ident{Name: "main", Position: NoPos},
-			Arg: &ast.ParenExpr{Exprs: nil},
-		}, env)
+		return interp.eval(
+			&ast.BinaryExpr{
+				X: &ast.Ident{Name: "MainStdin", Position: NoPos},
+				Y: &ast.CallExpr{
+					Fun:      &ast.Ident{Name: "main", Position: NoPos},
+					Arg:      &ast.ParenExpr{Exprs: nil},
+					PipedArg: &ast.ParenExpr{Exprs: []ast.Expr{&ast.Ident{Name: "MainStdin", Position: NoPos}}},
+				},
+				Op: token.PIPE,
+			},
+			env)
 	case *ast.ParenExpr:
 		var objs []Object
 		for _, expr := range node.Exprs {
@@ -318,14 +328,24 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 		switch funcDef := funcDef.(type) {
 		case *Builtin:
 			var positionals []Object
+			var pipedObjects []Object
 			var keywords map[string]Object
 
 			for _, arg := range node.Arg.Exprs {
 				var obj = interp.eval(arg, env)
 				positionals = append(positionals, obj)
 			}
+			for _, arg := range node.PipedArg.Exprs {
+				var obj = interp.eval(arg, env)
+				pipedObjects = append(pipedObjects, obj)
+			}
 
-			var userResult, userErr = funcDef.Func(positionals, keywords)
+			var pipedObject Object
+			if len(pipedObjects) > 0 {
+				pipedObject = pipedObjects[0]
+			}
+
+			var userResult, userErr = funcDef.Func(pipedObject, positionals, keywords)
 			if userErr != nil {
 				panic(interp.newError(node.Pos(), "%s", userErr))
 			}
@@ -333,28 +353,51 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 		case *Function:
 			var callLen = len(node.Arg.Exprs)
 			var declLen = len(funcDef.Signature.Args)
-			if interp.currPipedObject != nil && callLen != (declLen-1) {
-				panic(interp.newError(node.Arg.Pos(), "%s takes %d args one of which is piped, call is sending only %d arg", funcDef, declLen, callLen))
-			}
-			if interp.currPipedObject == nil && callLen != declLen {
+			if callLen != declLen {
 				panic(interp.newError(node.Arg.Pos(), "%s takes %d args, call is sending %d arg", funcDef, declLen, callLen))
 			}
+
+			want := len(funcDef.Signature.PipedArgs)
+			got := len(node.PipedArg.Exprs)
+			if want != got {
+				panic(interp.newError(node.Arg.Pos(), "%s takes %d piped args, call is sending %v", funcDef, want, got))
+			}
+
+			// if len(funcDef.Signature.PipedArgs) == 0 && interp.currPipedObject != nil {
+			// 	panic(interp.newError(node.Arg.Pos(), "%s takes no piped args, call is sending %v", funcDef, interp.currPipedObject))
+			// }
+
+			// if len(funcDef.Signature.PipedArgs) != 0 && interp.currPipedObject == nil {
+			// 	panic(interp.newError(node.Arg.Pos(), "%s takes %d piped args, call is sending none", funcDef, len(funcDef.Signature.PipedArgs)))
+			// }
 
 			var positionalArgNames []string
 			for _, param := range funcDef.Signature.Args {
 				positionalArgNames = append(positionalArgNames, param.Name)
 			}
 
-			var newEnv = env.Global().NewScope()
-			var positionalIdx = 0
-
-			if interp.currPipedObject != nil {
-				var name = positionalArgNames[positionalIdx]
-				interp.mustSet(newEnv, name, interp.currPipedObject)
-				positionalIdx += 1
-
+			var pipedArgNames []string
+			for _, param := range funcDef.Signature.PipedArgs {
+				pipedArgNames = append(pipedArgNames, param.Name)
 			}
 
+			var newEnv = env.Global().NewScope()
+
+			var pipedIdx = 0
+			for _, arg := range node.PipedArg.Exprs {
+				var obj = interp.eval(arg, env) // here we should use the old env
+				var name = pipedArgNames[0]
+				interp.mustSet(newEnv, name, obj)
+				pipedIdx += 1
+			}
+
+			// if interp.currPipedObject != nil {
+			// 	var name = pipedArgNames[0]
+			// 	fmt.Printf("name = %+v\n", name)
+			// 	interp.mustSet(newEnv, name, interp.currPipedObject)
+			// }
+
+			var positionalIdx = 0
 			for _, arg := range node.Arg.Exprs {
 				var obj = interp.eval(arg, env) // here we should use the old env
 				var name = positionalArgNames[positionalIdx]
@@ -427,11 +470,9 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			var y = interp.eval(node.Y, env)
 			return &Boolean{Value: x.GoValue() == y.GoValue()}
 		case token.PIPE:
-			var x = interp.eval(node.X, env)
-			interp.currPipedObject = x
-			var y = interp.eval(node.Y, env)
-			interp.currPipedObject = nil
-			return y
+			var nodeY = node.Y.(*ast.CallExpr)
+			nodeY.PipedArg.Exprs = []ast.Expr{node.X}
+			return interp.eval(nodeY, env)
 		default:
 			panic(interp.newError(node.Pos(), "unsupported binary operator %q", node.Op))
 		}
@@ -486,6 +527,21 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 		panic(interp.newError(node.Pos(), "unsupported node type %T", node))
 	}
 }
+
+// func (interp *Interpreter) reverseEval(node ast.Expr) *ast.CallExpr {
+// 	// give        a | b | c | d | e
+// 	// parsed as   (a (b (c (d e))))
+//
+// 	switch node := node.(type) {
+// 	case *ast.BinaryExpr: // TODO: only Op==token.PIPE
+// 		var nodeY = interp.reverseEval(node.Y)
+// 		nodeY.PipedArg.Exprs = []ast.Expr{}
+// 	case *ast.CallExpr:
+// 		return node
+// 	default:
+// 		panic(interp.newError(node.Pos(), "pipe righ-hand-side must be a call expr or a another pipe binary expr"))
+// 	}
+// }
 
 type InterpError struct {
 	err error

@@ -123,6 +123,12 @@ func (p *Parser) ParseExpr(src io.Reader) (ast.Expr, error) {
 	return result, nil
 }
 
+// func (p *Parser) fixPipeBinaryExprs(node ast.Node) ast.Node {
+// 	switch node := node.(type) {
+// 	  case
+// 	}
+// }
+
 func (p *Parser) parseDecls() []ast.Decl {
 	var nodes []ast.Decl
 	for {
@@ -265,12 +271,27 @@ func (p *Parser) parseExpr(lhs ast.Expr, minPrec token.Precedence) ast.Expr {
 			return lhs
 		}
 
+		if tk.Typ == token.PIPE {
+			var leftMost = minPrec == token.LowestPrecedence
+			if !leftMost {
+				// Pipe operator should be left-associative (the rest are right associative),
+				// by which I mean
+				//     a + b + c   is equal to   (a + (b + c))
+				// but
+				//     a | b | c   is equal to   ((a | b) | c)
+				//
+				// Behave as if prec has decreased:
+				return lhs
+			}
+		}
+
 		switch tk.Typ {
 		case token.LPAREN:
 			var paren = p.parseParenExpr()
 			lhs = &ast.CallExpr{
 				Fun:      lhs,
 				Arg:      paren,
+				PipedArg: &ast.ParenExpr{Exprs: nil}, // will be filled by interpreter, TODO: fill it during parsing
 				Position: lhs.Pos(),
 			}
 		default:
@@ -349,20 +370,40 @@ For:
 }
 
 func (p *Parser) parseExternalFuncDecl() ast.Decl {
+	// external echo(s string) => "echo ..."
+	// external (stdin reader) | echo(s string) => "echo ..."
+
 	var pos = p.scanner.CurrToken().Pos
 	p.expect(token.IDENTIFIER, "external")
 	p.proceed()
+
+	var pipedArgs []ast.FuncSignatureArg
+	var t = p.scanner.CurrToken()
+	if t.Typ == token.LPAREN {
+		pipedArgs = parseCsvInParens(p, func(p *Parser) ast.FuncSignatureArg {
+			return p.parseFuncSignatureArg()
+		})
+
+		p.expect(token.PIPE, "|")
+		p.proceed()
+	}
 
 	var identPos = p.scanner.CurrToken().Pos
 	var name = p.expectType(token.IDENTIFIER)
 	p.proceed()
 
 	var signature = p.parseExternalFuncSignature()
+	signature.PipedArgs = pipedArgs
 	p.expect(token.ARR, "=>")
 	p.proceed()
 
 	var stmtPos = p.scanner.CurrToken().Pos
 	var expr = p.parseExpr(nil, token.LowestPrecedence)
+
+	var pipedValue = &ast.ParenExpr{Exprs: nil}
+	if len(pipedArgs) > 0 {
+		pipedValue = &ast.ParenExpr{Exprs: []ast.Expr{&ast.Ident{Name: "stdin", Position: stmtPos}}}
+	}
 
 	return &ast.FuncDecl{
 		Name:      &ast.Ident{Name: name.Lit, Position: identPos},
@@ -375,10 +416,11 @@ func (p *Parser) parseExternalFuncDecl() ast.Decl {
 						Arg: &ast.ParenExpr{
 							Exprs: []ast.Expr{
 								// &ast.Ident{Name: "_stdin", Position: stmtPos},
-								&ast.Ident{Name: "stdin", Position: stmtPos},
+								// &ast.Ident{Name: "stdin", Position: stmtPos},
 								expr,
 							},
 						},
+						PipedArg: pipedValue,
 					},
 					Position: stmtPos,
 				},
@@ -395,11 +437,23 @@ func (p *Parser) parseFuncDecl() ast.Decl {
 	p.expect(token.IDENTIFIER, "function")
 	p.proceed()
 
+	var pipedArgs []ast.FuncSignatureArg
+	var t = p.scanner.CurrToken()
+	if t.Typ == token.LPAREN {
+		pipedArgs = parseCsvInParens(p, func(p *Parser) ast.FuncSignatureArg {
+			return p.parseFuncSignatureArg()
+		})
+
+		p.expect(token.PIPE, "|")
+		p.proceed()
+	}
+
 	var identPos = p.scanner.CurrToken().Pos
 	var name = p.expectType(token.IDENTIFIER)
 	p.proceed()
 
 	var signature = p.parseFuncSignature()
+	signature.PipedArgs = pipedArgs
 
 	var stmts = p.parseBlock()
 

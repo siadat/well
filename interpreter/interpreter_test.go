@@ -20,10 +20,10 @@ var testCases = []struct {
 }{
 	{
 		src: `
-		external echo(stdin reader, s string) => "echo ${s:%q}"
+		external echo(s string) => "echo ${s:%q}"
 
-	    function main() {
-	        print_stream(echo(MainStdin, "hello"))
+	    function (stdin reader) | main() {
+	        print_stream(echo("hello"))
 	    }
 	    `,
 		wantObj:    nil,
@@ -31,9 +31,10 @@ var testCases = []struct {
 	},
 	{
 		src: `
-		external echo(stdin reader, s string) => "echo ${s:%q}"
-		external ping(stdin reader, ip string) => "ping -c1 ${ip:%q}"
-		external nl(stdin reader) => "nl"
+		external echo(s string) => "echo ${s:%q}"
+		external ping(ip string) => "ping -c1 ${ip:%q}"
+		external (stdin reader) | nl() => "nl"
+		external (stdin reader) | head(n int) => "head -n ${n}"
 
 		function greet(s1 string, s2 string) {
 			println(s1, "and", s2)
@@ -41,17 +42,17 @@ var testCases = []struct {
 			if "hello" ~~ "ll" {
 			  return true
 			}
-			print_stream(ping(MainStdin, "4.2.2.4"))
-			print_stream(ping(MainStdin, "127.0.0.1"))
+			print_stream(ping("4.2.2.4"))
+			print_stream(ping("127.0.0.1"))
 		}
 		function f2(s1 string, s2 string) (string) {
 			return "s1=${s1} and s2=${s2}"
 		}
 
-		function main() {
+		function (stdin reader) | main() {
 			let s1 = "hi"
 			let bye = "bye"
-			let out = MainStdin | echo("hello1") | nl()
+			let out = echo("hello1\nhello2") | nl() | head(1)
 			print_stream(out)
 			let res = greet(s1, bye)
 			println(res)

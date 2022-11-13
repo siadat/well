@@ -16,8 +16,9 @@ type FuncSignatureArg struct {
 }
 
 type FuncSignature struct {
-	Args     []FuncSignatureArg
-	RetTypes []string
+	Args      []FuncSignatureArg
+	PipedArgs []FuncSignatureArg
+	RetTypes  []string
 
 	Position scanner.Pos
 }
@@ -85,8 +86,9 @@ type ParenExpr struct {
 }
 
 type CallExpr struct {
-	Fun Expr
-	Arg *ParenExpr
+	Fun      Expr
+	Arg      *ParenExpr
+	PipedArg *ParenExpr
 
 	Position scanner.Pos
 }
