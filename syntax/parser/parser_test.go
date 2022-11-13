@@ -206,83 +206,27 @@ func TestParser(tt *testing.T) {
 									Position: IgnorePos,
 								},
 								&ast.ExprStmt{
-									X: &ast.BinaryExpr{
-										X: &ast.BinaryExpr{
-											X: &ast.CallExpr{
-												Fun:      &ast.Ident{Name: "curl", Position: 212},
-												Arg:      &ast.ParenExpr{Position: 216},
-												PipedArg: &ast.ParenExpr{},
-												Position: 212,
-											},
-											Y: &ast.CallExpr{
-												Fun:      &ast.Ident{Name: "jq", Position: 221},
-												Arg:      &ast.ParenExpr{Position: 223},
-												PipedArg: &ast.ParenExpr{},
+									X: &ast.CallExpr{
+										Fun: &ast.Ident{Name: "head", Position: 228},
+										Arg: &ast.ParenExpr{Position: 232},
+										PipedArg: &ast.ParenExpr{Exprs: []ast.Expr{
+											&ast.CallExpr{
+												Fun: &ast.Ident{Name: "jq", Position: 221},
+												Arg: &ast.ParenExpr{Position: 223},
+												PipedArg: &ast.ParenExpr{Exprs: []ast.Expr{
+													&ast.CallExpr{
+														Fun:      &ast.Ident{Name: "curl", Position: 212},
+														Arg:      &ast.ParenExpr{Position: 216},
+														PipedArg: &ast.ParenExpr{},
+														Position: 212,
+													},
+												}},
 												Position: 221,
 											},
-											Op:       token.PIPE,
-											Position: 219,
-										},
-										Y: &ast.CallExpr{
-											Fun:      &ast.Ident{Name: "head", Position: 228},
-											Arg:      &ast.ParenExpr{Position: 232},
-											PipedArg: &ast.ParenExpr{},
-											Position: 228,
-										},
-
-										// X: &ast.CallExpr{
-										// 	Fun: &ast.Ident{
-										// 		Name:     "curl",
-										// 		Position: IgnorePos,
-										// 	},
-										// 	Arg: &ast.ParenExpr{
-										// 		Exprs:    nil,
-										// 		Position: IgnorePos,
-										// 	},
-										// 	PipedArg: &ast.ParenExpr{
-										// 		Exprs:    nil,
-										// 		Position: IgnorePos,
-										// 	},
-										// 	Position: IgnorePos,
-										// },
-										// Y: &ast.BinaryExpr{
-										// 	X: &ast.CallExpr{
-										// 		Fun: &ast.Ident{
-										// 			Name:     "jq",
-										// 			Position: IgnorePos,
-										// 		},
-										// 		Arg: &ast.ParenExpr{
-										// 			Exprs:    nil,
-										// 			Position: IgnorePos,
-										// 		},
-										// 		PipedArg: &ast.ParenExpr{
-										// 			Exprs:    nil,
-										// 			Position: IgnorePos,
-										// 		},
-										// 		Position: IgnorePos,
-										// 	},
-										// 	Y: &ast.CallExpr{
-										// 		Fun: &ast.Ident{
-										// 			Name:     "head",
-										// 			Position: IgnorePos,
-										// 		},
-										// 		Arg: &ast.ParenExpr{
-										// 			Exprs:    nil,
-										// 			Position: IgnorePos,
-										// 		},
-										// 		PipedArg: &ast.ParenExpr{
-										// 			Exprs:    nil,
-										// 			Position: IgnorePos,
-										// 		},
-										// 		Position: IgnorePos,
-										// 	},
-										// 	Op:       token.PIPE,
-										// 	Position: IgnorePos,
-										// },
-										Op:       token.PIPE,
-										Position: IgnorePos,
+										}},
+										Position: 228,
 									},
-									Position: IgnorePos,
+									Position: 212,
 								},
 								&ast.ReturnStmt{
 									Expr: &ast.Ident{

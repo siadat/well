@@ -299,11 +299,17 @@ func (p *Parser) parseExpr(lhs ast.Expr, minPrec token.Precedence) ast.Expr {
 			p.proceed()
 
 			var rhs = p.parseExpr(nil, prec)
-			lhs = &ast.BinaryExpr{
-				X:        lhs,
-				Y:        rhs,
-				Op:       tk.Typ,
-				Position: pos,
+			switch rhs := rhs.(type) {
+			case *ast.CallExpr:
+				rhs.PipedArg.Exprs = []ast.Expr{lhs}
+				lhs = rhs
+			default:
+				lhs = &ast.BinaryExpr{
+					X:        lhs,
+					Y:        rhs,
+					Op:       tk.Typ,
+					Position: pos,
+				}
 			}
 		}
 	}

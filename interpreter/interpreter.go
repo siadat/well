@@ -31,7 +31,6 @@ type Interpreter struct {
 	parser *parser.Parser
 
 	currEvalNode ast.Node
-	//currPipedObject Object
 }
 
 func NewInterpreter(stdout, stderr io.Writer) *Interpreter {
@@ -295,16 +294,15 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			interp.eval(decl, env)
 		}
 		return interp.eval(
-			&ast.BinaryExpr{
-				X: &ast.Ident{Name: "MainStdin", Position: NoPos},
-				Y: &ast.CallExpr{
-					Fun:      &ast.Ident{Name: "main", Position: NoPos},
-					Arg:      &ast.ParenExpr{Exprs: nil},
-					PipedArg: &ast.ParenExpr{Exprs: []ast.Expr{&ast.Ident{Name: "MainStdin", Position: NoPos}}},
-				},
-				Op: token.PIPE,
+			&ast.CallExpr{
+				Fun: &ast.Ident{Name: "main", Position: NoPos},
+				Arg: &ast.ParenExpr{Exprs: nil},
+				PipedArg: &ast.ParenExpr{Exprs: []ast.Expr{
+					&ast.Ident{Name: "MainStdin", Position: NoPos},
+				}},
 			},
-			env)
+			env,
+		)
 	case *ast.ParenExpr:
 		var objs []Object
 		for _, expr := range node.Exprs {
@@ -363,14 +361,6 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 				panic(interp.newError(node.Arg.Pos(), "%s takes %d piped args, call is sending %v", funcDef, want, got))
 			}
 
-			// if len(funcDef.Signature.PipedArgs) == 0 && interp.currPipedObject != nil {
-			// 	panic(interp.newError(node.Arg.Pos(), "%s takes no piped args, call is sending %v", funcDef, interp.currPipedObject))
-			// }
-
-			// if len(funcDef.Signature.PipedArgs) != 0 && interp.currPipedObject == nil {
-			// 	panic(interp.newError(node.Arg.Pos(), "%s takes %d piped args, call is sending none", funcDef, len(funcDef.Signature.PipedArgs)))
-			// }
-
 			var positionalArgNames []string
 			for _, param := range funcDef.Signature.Args {
 				positionalArgNames = append(positionalArgNames, param.Name)
@@ -390,12 +380,6 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 				interp.mustSet(newEnv, name, obj)
 				pipedIdx += 1
 			}
-
-			// if interp.currPipedObject != nil {
-			// 	var name = pipedArgNames[0]
-			// 	fmt.Printf("name = %+v\n", name)
-			// 	interp.mustSet(newEnv, name, interp.currPipedObject)
-			// }
 
 			var positionalIdx = 0
 			for _, arg := range node.Arg.Exprs {
@@ -469,10 +453,6 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 			var x = interp.eval(node.X, env)
 			var y = interp.eval(node.Y, env)
 			return &Boolean{Value: x.GoValue() == y.GoValue()}
-		case token.PIPE:
-			var nodeY = node.Y.(*ast.CallExpr)
-			nodeY.PipedArg.Exprs = []ast.Expr{node.X}
-			return interp.eval(nodeY, env)
 		default:
 			panic(interp.newError(node.Pos(), "unsupported binary operator %q", node.Op))
 		}
@@ -527,21 +507,6 @@ func (interp *Interpreter) eval(node ast.Node, env Environment) Object {
 		panic(interp.newError(node.Pos(), "unsupported node type %T", node))
 	}
 }
-
-// func (interp *Interpreter) reverseEval(node ast.Expr) *ast.CallExpr {
-// 	// give        a | b | c | d | e
-// 	// parsed as   (a (b (c (d e))))
-//
-// 	switch node := node.(type) {
-// 	case *ast.BinaryExpr: // TODO: only Op==token.PIPE
-// 		var nodeY = interp.reverseEval(node.Y)
-// 		nodeY.PipedArg.Exprs = []ast.Expr{}
-// 	case *ast.CallExpr:
-// 		return node
-// 	default:
-// 		panic(interp.newError(node.Pos(), "pipe righ-hand-side must be a call expr or a another pipe binary expr"))
-// 	}
-// }
 
 type InterpError struct {
 	err error
