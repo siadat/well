@@ -85,6 +85,42 @@ func EncodeToString(root *parser.Root, mapping func(string) interface{}) (string
 	return s.Value(), nil
 }
 
+type Variable struct {
+	Name string
+	Type string
+}
+
+func GetVariables(src string) ([]Variable, error) {
+	var p = parser.NewParser()
+	var root, parseErr = p.Parse(strings.NewReader(src))
+	if parseErr != nil {
+		return nil, parseErr
+	}
+
+	var variables []Variable
+	var f = func(name, opts string) {
+		var typ string
+		switch opts {
+		case "":
+			typ = "string"
+		case "%s":
+			typ = "string"
+		case "%q":
+			typ = "string"
+		case "%Q":
+			typ = "string"
+		case "%d":
+			typ = "int"
+		}
+		variables = append(variables, Variable{name, typ})
+	}
+	var err = findVars(root, f)
+	if err != nil {
+		return nil, err
+	}
+	return variables, nil
+}
+
 // TODO: refactor arg, varg, args
 // TODO: remove Root, and replace all uses with ContainerNode
 
@@ -141,6 +177,36 @@ func EncodeToCmdArgs(root *parser.Root, mapping func(string) interface{}) ([]str
 	return args, nil
 }
 
+func findVars(node parser.CmdNode, onFound func(string, string)) error {
+	switch item := node.(type) {
+	case *parser.Root:
+		for _, item := range item.Items {
+			var err = findVars(item, onFound)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	case parser.ContainerNode:
+		for _, item := range item.Items {
+			var err = findVars(item, onFound)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	case parser.Whs:
+		return nil
+	case parser.Wrd:
+		return nil
+	case parser.Var:
+		onFound(item.Name, item.Opts)
+		return nil
+	default:
+		panic(fmt.Sprintf("unsupported encoding for node type %T", item))
+	}
+}
+
 func convertToExecNode(node parser.CmdNode, escapeOuter bool, mapping func(string) interface{}) (ExecNode, error) {
 	// fmt.Printf("[---] convertToExecNode: %#v (escapeOuter=%v)\n", node, escapeOuter)
 	switch item := node.(type) {
@@ -183,14 +249,14 @@ func convertToExecNode(node parser.CmdNode, escapeOuter bool, mapping func(strin
 		if val == nil {
 			return nil, fmt.Errorf("variable %s is %v", item.Name, val)
 		}
-		return formatterNewNew(val, item.Opts, escapeOuter)
+		return varFormatter(val, item.Opts, escapeOuter)
 	default:
 		panic(fmt.Sprintf("unsupported encoding for node type %T", item))
 	}
 }
 
-func formatterNewNew(v interface{}, flags string, escapeOuter bool) (ExecNode, error) {
-	// fmt.Printf("[===] formatterNewNew:%#v flags=%q\n", v, flags)
+func varFormatter(v interface{}, flags string, escapeOuter bool) (ExecNode, error) {
+	// fmt.Printf("[===] varFormatter:%#v flags=%q\n", v, flags)
 	switch flags {
 	case "":
 		return ExecVar{Lit: fmt.Sprintf("%s", v)}, nil
@@ -216,46 +282,6 @@ func formatterNewNew(v interface{}, flags string, escapeOuter bool) (ExecNode, e
 			}, escapeOuter, nil)
 	case "%-":
 		return ExecVar{Lit: fmt.Sprintf("%s", v)}, nil
-	default:
-		panic(fmt.Sprintf("unsupported variable flags %q", flags))
-	}
-}
-
-func formatterNew(v interface{}, flags string) []parser.CmdNode {
-	switch flags {
-	case "":
-		return []parser.CmdNode{parser.Wrd{Lit: fmt.Sprintf("%s", v)}}
-	case "%s":
-		return []parser.CmdNode{parser.Wrd{Lit: fmt.Sprintf("%s", v)}}
-	case "%f":
-		return []parser.CmdNode{parser.Wrd{Lit: fmt.Sprintf("%f", v)}}
-	case "%q":
-		return []parser.CmdNode{parser.Wrd{Lit: fmt.Sprintf("%q", v)}}
-	case "%Q":
-		return []parser.CmdNode{parser.Wrd{Lit: fmt.Sprintf("%Q", v)}} // TODO: allow doing single-quote vs double-quote
-	case "%-":
-		var val = fmt.Sprintf("%s", v)
-		indexes := WhitespaceRe.FindAllStringIndex(val, -1)
-
-		var args []parser.CmdNode
-
-		var last = 0
-		for i := range indexes {
-			var wsstart = indexes[i][0]
-			var wsend = indexes[i][1]
-
-			if last < wsstart {
-				args = append(args, parser.Wrd{Lit: val[last:wsstart]})
-			}
-			args = append(args, parser.Whs{Lit: val[wsstart:wsend]})
-			last = wsend
-		}
-
-		if last < len(val) {
-			args = append(args, parser.Wrd{Lit: val[last:]})
-		}
-
-		return args
 	default:
 		panic(fmt.Sprintf("unsupported variable flags %q", flags))
 	}
